@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  product-db:
+    image: postgres:17
+    container_name: product-db
+    environment:
+      POSTGRES_USER: ${PRODUCT_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${PRODUCT_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${PRODUCT_POSTGRES_DB}
+    ports:
+      - "${PRODUCT_POSTGRES_PORT}:5432"
+    volumes:
+      - product-data:/var/lib/postgresql/data
+    networks:
+      - bff-network
+
+volumes:
+  product-data:
+
+networks:
+  bff-network:
+    driver: bridge

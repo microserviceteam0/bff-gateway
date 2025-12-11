@@ -1,0 +1,295 @@
+openapi: 3.0.3
+info:
+  title: Product Service API
+  description: REST API для управления продуктами
+  version: 1.0.0
+
+tags:
+  - name: Products
+    description: Операции с продуктами
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Проверка состояния сервиса
+      responses:
+        '200':
+          description: Сервис работает
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /api/products:
+    get:
+      tags:
+        - Products
+      summary: Получить список всех продуктов
+      description: Возвращает список всех доступных продуктов
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductResponse'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags:
+        - Products
+      summary: Создать новый продукт
+      description: Создаёт новый продукт с указанными параметрами
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+      responses:
+        '201':
+          description: Продукт успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+        '400':
+          description: Невалидные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/products/{id}:
+    get:
+      tags:
+        - Products
+      summary: Получить продукт по ID
+      description: Возвращает один продукт по его идентификатору
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID продукта
+          schema:
+            type: integer
+            format: int64
+            example: 1
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+        '400':
+          description: Невалидный ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Продукт не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Products
+      summary: Обновить продукт
+      description: Обновляет существующий продукт
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID продукта
+          schema:
+            type: integer
+            format: int64
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductRequest'
+      responses:
+        '200':
+          description: Продукт успешно обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductResponse'
+        '400':
+          description: Невалидные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Продукт не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - Products
+      summary: Удалить продукт
+      description: Удаляет продукт по его идентификатору
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID продукта
+          schema:
+            type: integer
+            format: int64
+            example: 1
+      responses:
+        '204':
+          description: Продукт успешно удалён
+        '400':
+          description: Невалидный ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Продукт не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    ProductResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Уникальный идентификатор продукта
+          example: 1
+        name:
+          type: string
+          description: Название продукта
+          example: "Lenovo ThinkPad Laptop"
+        description:
+          type: string
+          description: Описание продукта
+          example: "Professional laptop for developers"
+        price:
+          type: number
+          format: double
+          description: Цена продукта
+          example: 85000.00
+        stock:
+          type: integer
+          description: Количество на складе
+          example: 15
+        created_at:
+          type: string
+          format: date-time
+          description: Дата и время создания
+          example: "2025-12-11T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Дата и время последнего обновления
+          example: "2025-12-11T10:00:00Z"
+      required:
+        - id
+        - name
+        - price
+        - stock
+        - created_at
+        - updated_at
+
+    CreateProductRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          description: Название продукта
+          example: "Wireless Mouse"
+        description:
+          type: string
+          description: Описание продукта
+          example: "Ergonomic wireless mouse"
+        price:
+          type: number
+          format: double
+          minimum: 0
+          description: Цена продукта
+          example: 2500.00
+        stock:
+          type: integer
+          minimum: 0
+          description: Количество на складе
+          example: 100
+      required:
+        - name
+        - price
+        - stock
+
+    UpdateProductRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          description: Название продукта
+          example: "Updated Product Name"
+        description:
+          type: string
+          description: Описание продукта
+          example: "Updated description"
+        price:
+          type: number
+          format: double
+          minimum: 0
+          description: Цена продукта
+          example: 3000.00
+        stock:
+          type: integer
+          minimum: 0
+          description: Количество на складе
+          example: 50
+      required:
+        - name
+        - price
+        - stock
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Сообщение об ошибке
+          example: "product with id 999 not found"
+      required:
+        - error
