@@ -4,7 +4,7 @@
 // - protoc             v3.21.12
 // source: api/order/v1/order.proto
 
-package order_v1
+package v1
 
 import (
 	context "context"
@@ -24,6 +24,7 @@ const (
 	OrderService_UpdateOrder_FullMethodName   = "/order.v1.OrderService/UpdateOrder"
 	OrderService_GetOrder_FullMethodName      = "/order.v1.OrderService/GetOrder"
 	OrderService_GetUserOrders_FullMethodName = "/order.v1.OrderService/GetUserOrders"
+	OrderService_GetOrderStats_FullMethodName = "/order.v1.OrderService/GetOrderStats"
 )
 
 // OrderServiceClient is the client API for OrderService service.
@@ -35,6 +36,7 @@ type OrderServiceClient interface {
 	UpdateOrder(ctx context.Context, in *UpdateOrderRequest, opts ...grpc.CallOption) (*UpdateOrderResponse, error)
 	GetOrder(ctx context.Context, in *GetOrderRequest, opts ...grpc.CallOption) (*GetOrderResponse, error)
 	GetUserOrders(ctx context.Context, in *GetUserOrdersRequest, opts ...grpc.CallOption) (*GetUserOrdersResponse, error)
+	GetOrderStats(ctx context.Context, in *GetOrderStatsRequest, opts ...grpc.CallOption) (*GetOrderStatsResponse, error)
 }
 
 type orderServiceClient struct {
@@ -95,6 +97,16 @@ func (c *orderServiceClient) GetUserOrders(ctx context.Context, in *GetUserOrder
 	return out, nil
 }
 
+func (c *orderServiceClient) GetOrderStats(ctx context.Context, in *GetOrderStatsRequest, opts ...grpc.CallOption) (*GetOrderStatsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetOrderStatsResponse)
+	err := c.cc.Invoke(ctx, OrderService_GetOrderStats_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // OrderServiceServer is the server API for OrderService service.
 // All implementations must embed UnimplementedOrderServiceServer
 // for forward compatibility.
@@ -104,6 +116,7 @@ type OrderServiceServer interface {
 	UpdateOrder(context.Context, *UpdateOrderRequest) (*UpdateOrderResponse, error)
 	GetOrder(context.Context, *GetOrderRequest) (*GetOrderResponse, error)
 	GetUserOrders(context.Context, *GetUserOrdersRequest) (*GetUserOrdersResponse, error)
+	GetOrderStats(context.Context, *GetOrderStatsRequest) (*GetOrderStatsResponse, error)
 	mustEmbedUnimplementedOrderServiceServer()
 }
 
@@ -128,6 +141,9 @@ func (UnimplementedOrderServiceServer) GetOrder(context.Context, *GetOrderReques
 }
 func (UnimplementedOrderServiceServer) GetUserOrders(context.Context, *GetUserOrdersRequest) (*GetUserOrdersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetUserOrders not implemented")
+}
+func (UnimplementedOrderServiceServer) GetOrderStats(context.Context, *GetOrderStatsRequest) (*GetOrderStatsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetOrderStats not implemented")
 }
 func (UnimplementedOrderServiceServer) mustEmbedUnimplementedOrderServiceServer() {}
 func (UnimplementedOrderServiceServer) testEmbeddedByValue()                      {}
@@ -240,6 +256,24 @@ func _OrderService_GetUserOrders_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OrderService_GetOrderStats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetOrderStatsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrderServiceServer).GetOrderStats(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrderService_GetOrderStats_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrderServiceServer).GetOrderStats(ctx, req.(*GetOrderStatsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // OrderService_ServiceDesc is the grpc.ServiceDesc for OrderService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -266,6 +300,10 @@ var OrderService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUserOrders",
 			Handler:    _OrderService_GetUserOrders_Handler,
+		},
+		{
+			MethodName: "GetOrderStats",
+			Handler:    _OrderService_GetOrderStats_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
