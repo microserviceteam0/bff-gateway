@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -15,25 +14,44 @@ import (
 
 	"github.com/gorilla/mux"
 	httpSwagger "github.com/swaggo/http-swagger"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 
 	pb "github.com/microserviceteam0/bff-gateway/product-service/api/proto"
 	"github.com/microserviceteam0/bff-gateway/product-service/internal/config"
 	"github.com/microserviceteam0/bff-gateway/product-service/internal/handler"
+	"github.com/microserviceteam0/bff-gateway/product-service/internal/middleware"
 	"github.com/microserviceteam0/bff-gateway/product-service/internal/repository"
 	"github.com/microserviceteam0/bff-gateway/product-service/internal/service"
 	"github.com/microserviceteam0/bff-gateway/product-service/pkg/database"
+	"github.com/microserviceteam0/bff-gateway/product-service/pkg/logger"
 )
 
 func Run() error {
+	if err := logger.InitLogger("product-service"); err != nil {
+		return fmt.Errorf("init logger: %w", err)
+	}
+	defer logger.Log.Sync()
+
+	logger.Info("starting product service")
+
 	cfg := config.Load()
-	log.Println("Starting Product Service...")
+	logger.Info("configuration loaded",
+		zap.String("server_port", cfg.ServerPort),
+		zap.String("grpc_port", cfg.GRPCPort),
+	)
 
 	db, err := initDatabase(cfg.DatabaseURL)
 	if err != nil {
+		logger.Fatal("failed to init database", zap.Error(err))
 		return fmt.Errorf("init database: %w", err)
 	}
 	defer closeDatabase(db)
+
+	if err := database.RunMigrations(db, "./migrations"); err != nil {
+		logger.Fatal("failed to run migrations", zap.Error(err))
+		return fmt.Errorf("run migrations: %w", err)
+	}
 
 	productRepo := repository.NewPostgresRepository(db)
 	productService := service.NewProductService(productRepo)
@@ -47,19 +65,22 @@ func Run() error {
 
 // initDatabase подключается к PostgreSQL
 func initDatabase(databaseURL string) (*sql.DB, error) {
+	logger.Info("connecting to database")
+
 	db, err := database.NewPostgres(databaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("connect to database: %w", err)
 	}
 
-	log.Println("✓ Database connected")
+	logger.Info("database connected successfully")
 	return db, nil
 }
 
 // closeDatabase закрывает соединение с БД
 func closeDatabase(db *sql.DB) {
+	logger.Info("closing database connection")
 	if err := db.Close(); err != nil {
-		log.Printf("Error closing database: %v", err)
+		logger.Error("error closing database", zap.Error(err))
 	}
 }
 
@@ -67,11 +88,13 @@ func closeDatabase(db *sql.DB) {
 func startHTTPServer(port string, productService service.ProductService) *http.Server {
 	router := mux.NewRouter()
 
+	// Добавляем middleware для логирования
+	router.Use(middleware.LoggingMiddleware)
+
 	productHandler := handler.NewProductHandler(productService)
 	productHandler.RegisterRoutes(router)
 
 	router.HandleFunc("/health", healthCheckHandler).Methods(http.MethodGet)
-
 	router.HandleFunc("/api/openapi.yaml", openapiHandler).Methods(http.MethodGet)
 	router.PathPrefix("/swagger/").Handler(swaggerHandler(port))
 
@@ -85,12 +108,14 @@ func startHTTPServer(port string, productService service.ProductService) *http.S
 	}
 
 	go func() {
-		log.Printf("✓ HTTP Server starting on http://localhost%s", addr)
-		log.Printf("✓ API available at http://localhost%s/api/products", addr)
-		log.Printf("✓ Swagger UI at http://localhost%s/swagger/", addr)
+		logger.Info("HTTP server started",
+			zap.String("address", fmt.Sprintf("http://localhost%s", addr)),
+			zap.String("api_endpoint", fmt.Sprintf("http://localhost%s/api/products", addr)),
+			zap.String("swagger_ui", fmt.Sprintf("http://localhost%s/swagger/", addr)),
+		)
 
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("HTTP Server failed: %v", err)
+			logger.Fatal("HTTP server failed", zap.Error(err))
 		}
 	}()
 
@@ -101,16 +126,19 @@ func startHTTPServer(port string, productService service.ProductService) *http.S
 func startGRPCServer(port string, productService service.ProductService) *grpc.Server {
 	lis, err := net.Listen("tcp", ":"+port)
 	if err != nil {
-		log.Fatalf("Failed to listen gRPC: %v", err)
+		logger.Fatal("failed to listen gRPC", zap.String("port", port), zap.Error(err))
 	}
 
 	grpcServer := grpc.NewServer()
 	pb.RegisterProductServiceServer(grpcServer, handler.NewProductGRPCHandler(productService))
 
 	go func() {
-		log.Printf("✓ gRPC Server starting on :%s", port)
+		logger.Info("gRPC server started",
+			zap.String("address", fmt.Sprintf(":%s", port)),
+		)
+
 		if err := grpcServer.Serve(lis); err != nil {
-			log.Fatalf("gRPC Server failed: %v", err)
+			logger.Fatal("gRPC server failed", zap.Error(err))
 		}
 	}()
 
@@ -145,16 +173,16 @@ func waitForShutdown(httpServer *http.Server, grpcServer *grpc.Server) {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	<-quit
-	log.Println("Shutting down servers...")
+	logger.Info("shutdown signal received, stopping servers")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := httpServer.Shutdown(ctx); err != nil {
-		log.Printf("HTTP Server forced to shutdown: %v", err)
+		logger.Error("HTTP server forced shutdown", zap.Error(err))
 	}
 
 	grpcServer.GracefulStop()
 
-	log.Println("Servers stopped")
+	logger.Info("servers stopped gracefully")
 }
