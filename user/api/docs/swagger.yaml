@@ -1,0 +1,314 @@
+basePath: /
+definitions:
+  dto.CreateUserRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        minLength: 6
+        type: string
+      role:
+        type: string
+    required:
+    - email
+    - name
+    - password
+    - role
+    type: object
+  dto.UpdateUserRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      role:
+        type: string
+    type: object
+  dto.UserResponse:
+    properties:
+      email:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      role:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Микросервис для управления пользователями
+  title: User Service API
+  version: "1.0"
+paths:
+  /api/users:
+    get:
+      consumes:
+      - application/json
+      description: Получение списка всех пользователей системы
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список пользователей
+          schema:
+            items:
+              $ref: '#/definitions/dto.UserResponse'
+            type: array
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить всех пользователей
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      description: Создание нового пользователя в системе с валидацией email и хешированием
+        пароля
+      parameters:
+      - description: Данные для создания пользователя
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Пользователь успешно создан
+          schema:
+            $ref: '#/definitions/dto.UserResponse'
+        "400":
+          description: Некорректные входные данные
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Пользователь с таким email уже существует
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Создать нового пользователя
+      tags:
+      - users
+  /api/users/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Удаление пользователя по ID
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Пользователь удалён
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Некорректный ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Пользователь не найден
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Удалить пользователя
+      tags:
+      - users
+    get:
+      consumes:
+      - application/json
+      description: Получение информации о пользователе по его идентификатору
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Пользователь найден
+          schema:
+            $ref: '#/definitions/dto.UserResponse'
+        "400":
+          description: Некорректный ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Пользователь не найден
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить пользователя по ID
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Частичное обновление данных пользователя. Можно обновлять одно
+        или несколько полей
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Данные для обновления (можно указать только изменяемые поля)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Пользователь успешно обновлён
+          schema:
+            $ref: '#/definitions/dto.UserResponse'
+        "400":
+          description: Некорректные данные или ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Пользователь не найден
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Email уже используется другим пользователем
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Обновить пользователя
+      tags:
+      - users
+  /api/users/email/{email}:
+    get:
+      consumes:
+      - application/json
+      description: Поиск пользователя по email адресу
+      parameters:
+      - description: Email пользователя
+        in: path
+        name: email
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Пользователь найден
+          schema:
+            $ref: '#/definitions/dto.UserResponse'
+        "400":
+          description: Email не указан
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Пользователь не найден
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить пользователя по email
+      tags:
+      - users
+  /api/users/validate:
+    post:
+      consumes:
+      - application/json
+      description: Проверка учетных данных пользователя (email и пароль)
+      parameters:
+      - description: Учетные данные
+        in: body
+        name: request
+        required: true
+        schema:
+          properties:
+            email:
+              type: string
+            password:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Учетные данные верны
+          schema:
+            $ref: '#/definitions/dto.UserResponse'
+        "400":
+          description: Некорректные данные
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Неверные учетные данные
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Валидировать пользователя
+      tags:
+      - authentication
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: Проверка статуса сервиса и подключения к базе данных
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Сервис работает
+          schema:
+            additionalProperties: true
+            type: object
+        "503":
+          description: Сервис недоступен
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Проверка здоровья сервиса
+      tags:
+      - health
+swagger: "2.0"

@@ -1,0 +1,48 @@
+// test_service_main.go
+package main
+
+import (
+	"fmt"
+	"log"
+	"user/internal/app/service"
+	"user/internal/infrastructure/repository"
+
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+)
+
+func main() {
+	dsn := "host=localhost port=5433 user=postgres password=postgres dbname=user_service sslmode=disable"
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	repo := repository.NewUserRepository(db)
+	userService := service.NewUserService(repo)
+
+	// Тест создания пользователя
+	fmt.Println("=== Тест создания пользователя ===")
+	user, err := userService.CreateUser(
+		"John Doe",
+		"john@example.com",
+		"password123",
+		"user",
+	)
+
+	if err != nil {
+		fmt.Printf("Ошибка: %v\n", err)
+	} else {
+		fmt.Printf("Создан пользователь: ID=%d, Name=%s, Email=%s\n",
+			user.ID, user.Name, user.Email)
+	}
+
+	// Тест поиска по email
+	fmt.Println("\n=== Тест поиска по email ===")
+	foundUser, err := userService.GetUserByEmail("john@example.com")
+	if err != nil {
+		fmt.Printf("Ошибка: %v\n", err)
+	} else {
+		fmt.Printf("Найден: %s (%s)\n", foundUser.Name, foundUser.Email)
+	}
+}
