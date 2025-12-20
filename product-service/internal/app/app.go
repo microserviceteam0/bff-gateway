@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/microserviceteam0/bff-gateway/shared/metrics"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -90,13 +92,14 @@ func closeDatabase(db *sql.DB) {
 func startHTTPServer(port string, productService service.ProductService) *http.Server {
 	router := mux.NewRouter()
 
-	// Добавляем middleware для логирования
 	router.Use(middleware.LoggingMiddleware)
+	router.Use(metrics.HTTPMetricsMiddleware("product-service"))
 
 	productHandler := handler.NewProductHandler(productService)
 	productHandler.RegisterRoutes(router)
 
 	router.HandleFunc("/health", healthCheckHandler).Methods(http.MethodGet)
+	router.Handle("/metrics", promhttp.Handler()).Methods(http.MethodGet)
 	router.HandleFunc("/api/openapi.yaml", openapiHandler).Methods(http.MethodGet)
 	router.PathPrefix("/swagger/").Handler(swaggerHandler(port))
 
@@ -131,7 +134,10 @@ func startGRPCServer(port string, productService service.ProductService) *grpc.S
 		logger.Fatal("failed to listen gRPC", zap.String("port", port), zap.Error(err))
 	}
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(metrics.GRPCUnaryServerInterceptor("product-service")),
+	)
+
 	pb.RegisterProductServiceServer(grpcServer, handler.NewProductGRPCHandler(productService))
 
 	go func() {

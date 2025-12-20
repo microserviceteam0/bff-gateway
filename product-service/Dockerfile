@@ -3,13 +3,14 @@ FROM golang:1.25-alpine AS builder
 
 RUN apk add --no-cache git ca-certificates tzdata wget
 
-WORKDIR /app
+WORKDIR /build
 
-COPY go.mod go.sum ./
+COPY shared/ ./shared/
+COPY product-service/ ./product-service/
+
+WORKDIR /build/product-service
 
 RUN go mod download
-
-COPY . .
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags="-w -s" \
@@ -27,8 +28,8 @@ RUN addgroup -g 1000 appuser && \
 WORKDIR /app
 
 COPY --from=builder /app/bin/product-service /app/product-service
-COPY --from=builder /app/api/openapi.yaml /app/api/openapi.yaml
-COPY --from=builder /app/migrations /app/migrations
+COPY --from=builder /build/product-service/api/openapi.yaml /app/api/openapi.yaml
+COPY --from=builder /build/product-service/migrations /app/migrations
 
 RUN chown -R appuser:appuser /app
 
