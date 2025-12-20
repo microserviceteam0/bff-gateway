@@ -17,7 +17,7 @@ RUN go mod download
 COPY . .
 
 # Собираем приложение
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-w -s" -o /app/user-service ./cmd/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-w -s" -o /app/user-auth_service ./cmd/main.go
 
 # Этап 2: Запуск
 FROM alpine:latest

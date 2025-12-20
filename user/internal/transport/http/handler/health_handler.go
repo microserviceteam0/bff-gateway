@@ -43,10 +43,10 @@ func (h *HealthHandler) HealthCheck(c *gin.Context) {
 	}
 
 	c.JSON(status, gin.H{
-		"status":    dbStatus,
-		"service":   "user-service",
-		"timestamp": time.Now().Format(time.RFC3339),
-		"version":   "1.0.0",
-		"database":  dbStatus,
+		"status":       dbStatus,
+		"auth_service": "user-auth_service",
+		"timestamp":    time.Now().Format(time.RFC3339),
+		"version":      "1.0.0",
+		"database":     dbStatus,
 	})
 }

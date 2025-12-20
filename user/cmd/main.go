@@ -11,10 +11,10 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+	"user/internal/domain/repository"
 
 	userv1 "user/api/proto" // исправь путь если нужно
 	"user/internal/app/service"
-	"user/internal/infrastructure/repository"
 	mygrpc "user/internal/transport/grpc" // переименовываем наш пакет
 	"user/internal/transport/http/handler"
 	"user/internal/transport/middleware"
@@ -157,10 +157,10 @@ func setupHTTPRouter(userHandler *handler.UserHandler, healthHandler *handler.He
 	// Root endpoint
 	router.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{
-			"service":   "User Service API",
-			"version":   "1.0.0",
-			"status":    "running",
-			"protocols": []string{"HTTP/REST", "gRPC"},
+			"auth_service": "User Service API",
+			"version":      "1.0.0",
+			"status":       "running",
+			"protocols":    []string{"HTTP/REST", "gRPC"},
 			"endpoints": gin.H{
 				"docs":   "/swagger/index.html",
 				"health": "/health",

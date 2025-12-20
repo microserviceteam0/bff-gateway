@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"user/internal/app/service"
-	"user/internal/infrastructure/repository"
+	"user/internal/domain/repository"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

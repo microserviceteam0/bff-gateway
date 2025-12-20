@@ -2,10 +2,11 @@ package service
 
 import (
 	"errors"
-	"golang.org/x/crypto/bcrypt"
 	"regexp"
 	"user/internal/domain/entity"
-	"user/internal/infrastructure/repository"
+	"user/internal/domain/repository"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 // UserService определяет контракт для бизнес-логики работы с пользователями

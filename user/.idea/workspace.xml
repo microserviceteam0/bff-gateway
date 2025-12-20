@@ -19,40 +19,40 @@
     </option>
   </component>
   <component name="GOROOT" url="file://$APPLICATION_HOME_DIR$/sdk/go1.24.6" />
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 6
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 6
+}</component>
   <component name="ProjectId" id="374br6KGoyYfPLSlhLqJK6rZ6DF" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "DefaultGoTemplateProperty": "Go File",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.GoLinterPluginOnboarding": "true",
-    "RunOnceActivity.GoLinterPluginStorageMigration": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.go.formatter.settings.were.checked": "true",
-    "RunOnceActivity.go.migrated.go.modules.settings": "true",
-    "RunOnceActivity.go.modules.go.list.on.any.changes.was.set": "true",
-    "go.import.settings.migrated": "true",
-    "last_opened_file_path": "C:/Users/кирик",
-    "node.js.detected.package.eslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "onboarding.tips.debug.path": "C:/Users/кирик/GolandProjects/user/main.go"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;DefaultGoTemplateProperty&quot;: &quot;Go File&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.GoLinterPluginOnboarding&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.GoLinterPluginStorageMigration&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.go.formatter.settings.were.checked&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.go.migrated.go.modules.settings&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.go.modules.go.list.on.any.changes.was.set&quot;: &quot;true&quot;,
+    &quot;go.import.settings.migrated&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/кирик&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;onboarding.tips.debug.path&quot;: &quot;C:/Users/кирик/GolandProjects/user/main.go&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\кирик\GolandProjects\user\cmd_auth" />
+      <recent name="C:\Users\кирик\GolandProjects\user\internal\domain" />
       <recent name="C:\Users\кирик\GolandProjects\user\internal\transport\http" />
       <recent name="C:\Users\кирик\GolandProjects\user\api" />
       <recent name="C:\Users\кирик\GolandProjects\user\test" />
-      <recent name="C:\Users\кирик\GolandProjects\user" />
-      <recent name="C:\Users\кирик\GolandProjects\user\cmd" />
     </key>
   </component>
   <component name="SharedIndexes">
