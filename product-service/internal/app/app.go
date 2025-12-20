@@ -31,7 +31,9 @@ func Run() error {
 	if err := logger.InitLogger("product-service"); err != nil {
 		return fmt.Errorf("init logger: %w", err)
 	}
-	defer logger.Log.Sync()
+	defer func() {
+		_ = logger.Log.Sync()
+	}()
 
 	logger.Info("starting product service")
 
