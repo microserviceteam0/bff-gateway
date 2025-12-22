@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 	pb "order-service/api/order/v1"
+	"order-service/pkg/clients/product"
 
-	// product_pb "product-service/pkg/api/v1"
 	"order-service/internal/model"
 	"order-service/internal/repository"
 	"strconv"
@@ -31,14 +31,17 @@ type OrderService interface {
 }
 
 type OrderServiceImpl struct {
-	repo repository.OrderRepository
+	repo          repository.OrderRepository
+	productClient *product.Client
 }
 
 func NewOrderService(
 	repo repository.OrderRepository,
+	productClient *product.Client,
 ) OrderService {
 	return &OrderServiceImpl{
-		repo: repo,
+		repo:          repo,
+		productClient: productClient,
 	}
 }
 
@@ -81,7 +84,6 @@ func (s *OrderServiceImpl) CreateOrder(ctx context.Context, req *pb.CreateOrderR
 	if req.UserId == 0 {
 		req.UserId = userID
 	} else if req.UserId != userID {
-		// Assuming regular users can only create orders for themselves
 		return nil, status.Errorf(codes.PermissionDenied, "FORBIDDEN: Cannot create order for another user")
 	}
 
@@ -89,19 +91,35 @@ func (s *OrderServiceImpl) CreateOrder(ctx context.Context, req *pb.CreateOrderR
 		return nil, status.Errorf(codes.InvalidArgument, "INVALID_REQUEST: %v", err)
 	}
 
+	// 1. Extract product IDs
+	productIDs := make([]int64, len(req.Items))
+	for i, item := range req.Items {
+		productIDs[i] = item.ProductId
+	}
+
+	// 2. Fetch product details from Product Service
+	productsMap, err := s.productClient.GetProducts(ctx, productIDs)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "PRODUCT_SERVICE_ERROR: Failed to fetch products: %v", err)
+	}
+
 	orderItems := make([]model.OrderItem, len(req.Items))
 	totalAmount := 0.0
-	dummyPrice := 10.0
-	dummyName := "Sample Product"
 
 	for i, item := range req.Items {
+		product, exists := productsMap[item.ProductId]
+		if !exists {
+			return nil, status.Errorf(codes.NotFound, "PRODUCT_NOT_FOUND: Product with ID %d not found", item.ProductId)
+		}
+
+		// Use real price and name from product service
 		orderItems[i] = model.OrderItem{
 			ProductID:   item.ProductId,
 			Quantity:    item.Quantity,
-			Price:       dummyPrice,
-			ProductName: fmt.Sprintf("%s %d", dummyName, item.ProductId),
+			Price:       product.Price,
+			ProductName: product.Name,
 		}
-		totalAmount += dummyPrice * float64(item.Quantity)
+		totalAmount += product.Price * float64(item.Quantity)
 	}
 
 	order := &model.Order{

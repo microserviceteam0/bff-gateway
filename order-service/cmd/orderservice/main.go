@@ -6,6 +6,7 @@ import (
 	"order-service/internal/model"
 	"order-service/internal/repository"
 	"order-service/internal/service"
+	"order-service/pkg/clients/product"
 	"os"
 	"strconv"
 	"time"
@@ -69,11 +70,26 @@ func main() {
 	orderRepo := repository.NewOrderRepository(db)
 	slog.Info("Order Repository initialized.")
 
-	// 5. Initialize Service
-	orderService := service.NewOrderService(orderRepo)
+	// 5. Initialize Product Service Client
+	productServiceURL := os.Getenv("PRODUCT_SERVICE_URL")
+	if productServiceURL == "" {
+		productServiceURL = "localhost:50052"
+		slog.Warn("PRODUCT_SERVICE_URL not set, using default", "url", productServiceURL)
+	}
+
+	productClient, err := product.NewClient(productServiceURL)
+	if err != nil {
+		slog.Error("Failed to initialize Product Service client", "error", err)
+		os.Exit(1)
+	}
+	defer productClient.Close()
+	slog.Info("Product Service client initialized.")
+
+	// 6. Initialize Service
+	orderService := service.NewOrderService(orderRepo, productClient)
 	slog.Info("Order Service initialized.")
 
-	// 6. Setup gRPC Server
+	// 7. Setup gRPC Server
 	lis, err := net.Listen("tcp", ":"+strconv.Itoa(grpcPort))
 	if err != nil {
 		slog.Error("Failed to listen", "port", grpcPort, "error", err)
