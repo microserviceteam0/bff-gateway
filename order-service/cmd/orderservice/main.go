@@ -3,14 +3,14 @@ package main
 import (
 	"log/slog"
 	"net"
+	"order-service/internal/model"
+	"order-service/internal/repository"
+	"order-service/internal/service"
 	"os"
 	"strconv"
 	"time"
 
 	pb "order-service/api/order/v1"
-	"order-service/internal/model"
-	"order-service/internal/repository"
-	"order-service/internal/service"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -41,7 +41,7 @@ func main() {
 
 	dbDSN := os.Getenv("DATABASE_URL")
 	if dbDSN == "" {
-		dbDSN = defaultDBDSN // Fallback to a default example DSN
+		dbDSN = defaultDBDSN
 		slog.Warn("DATABASE_URL environment variable not set, using default example DSN. Please configure DATABASE_URL for production.", "dsn", defaultDBDSN)
 	}
 
@@ -69,8 +69,8 @@ func main() {
 	orderRepo := repository.NewOrderRepository(db)
 	slog.Info("Order Repository initialized.")
 
-	// 5. Initialize Service (Product Service client is now removed)
-	orderService := service.NewOrderService(orderRepo) // No productClient needed after refactoring
+	// 5. Initialize Service
+	orderService := service.NewOrderService(orderRepo)
 	slog.Info("Order Service initialized.")
 
 	// 6. Setup gRPC Server
@@ -83,7 +83,7 @@ func main() {
 
 	grpcServer := grpc.NewServer()
 	pb.RegisterOrderServiceServer(grpcServer, &service.GRPCServer{Service: orderService})
-	reflection.Register(grpcServer) // Enable gRPC reflection for debugging
+	reflection.Register(grpcServer)
 
 	slog.Info("Order Service gRPC server started.")
 	if err := grpcServer.Serve(lis); err != nil {

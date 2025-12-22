@@ -1,21 +1,23 @@
 package service
 
 import (
-	pb "order-service/api/order/v1"
 	"context"
 	"errors"
 	"fmt"
-	// product_pb "product-service/pkg/api/v1"
-	"time"
+	pb "order-service/api/order/v1"
 
+	// product_pb "product-service/pkg/api/v1"
 	"order-service/internal/model"
 	"order-service/internal/repository"
+	"strconv"
+	"time"
 
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"gorm.io/gorm"
 
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -30,23 +32,19 @@ type OrderService interface {
 
 type OrderServiceImpl struct {
 	repo repository.OrderRepository
-	// productClient product_pb.ProductServiceClient
 }
 
 func NewOrderService(
 	repo repository.OrderRepository,
-	// productClient product_pb.ProductServiceClient,
 ) OrderService {
 	return &OrderServiceImpl{
 		repo: repo,
-		// productClient: productClient,
 	}
 }
 
-// GRPCServer implements the gRPC server interface for OrderService.
 type GRPCServer struct {
-	pb.UnimplementedOrderServiceServer // Must be embedded for forward compatibility
-	Service                         OrderService       // Our business logic service
+	pb.UnimplementedOrderServiceServer
+	Service OrderService
 }
 
 func (s *GRPCServer) CreateOrder(ctx context.Context, req *pb.CreateOrderRequest) (*pb.CreateOrderResponse, error) {
@@ -75,23 +73,33 @@ func (s *GRPCServer) GetOrderStats(ctx context.Context, req *pb.GetOrderStatsReq
 
 // CreateOrder создаёт новый заказ
 func (s *OrderServiceImpl) CreateOrder(ctx context.Context, req *pb.CreateOrderRequest) (*pb.CreateOrderResponse, error) {
+	userID, _, err := s.getUserInfoFromContext(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "UNAUTHORIZED: %v", err)
+	}
+
+	if req.UserId == 0 {
+		req.UserId = userID
+	} else if req.UserId != userID {
+		// Assuming regular users can only create orders for themselves
+		return nil, status.Errorf(codes.PermissionDenied, "FORBIDDEN: Cannot create order for another user")
+	}
+
 	if err := s.validateCreateOrderRequest(req); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "INVALID_REQUEST: %v", err)
 	}
 
-	// Calls to Product Service were commented out as requested.
-	// Using dummy data for product price and name.
 	orderItems := make([]model.OrderItem, len(req.Items))
 	totalAmount := 0.0
-	dummyPrice := 10.0    // 10 units of currency per item
+	dummyPrice := 10.0
 	dummyName := "Sample Product"
 
 	for i, item := range req.Items {
 		orderItems[i] = model.OrderItem{
 			ProductID:   item.ProductId,
 			Quantity:    item.Quantity,
-			Price:       dummyPrice, // Using dummy price
-			ProductName: fmt.Sprintf("%s %d", dummyName, item.ProductId), // Using dummy name
+			Price:       dummyPrice,
+			ProductName: fmt.Sprintf("%s %d", dummyName, item.ProductId),
 		}
 		totalAmount += dummyPrice * float64(item.Quantity)
 	}
@@ -144,6 +152,15 @@ func (s *OrderServiceImpl) GetOrder(ctx context.Context, req *pb.GetOrderRequest
 }
 
 func (s *OrderServiceImpl) GetUserOrders(ctx context.Context, req *pb.GetUserOrdersRequest) (*pb.GetUserOrdersResponse, error) {
+	userID, isAdmin, err := s.getUserInfoFromContext(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "UNAUTHORIZED: %v", err)
+	}
+
+	if !isAdmin && req.UserId != userID {
+		return nil, status.Errorf(codes.PermissionDenied, "FORBIDDEN: Access denied")
+	}
+
 	page := req.Page
 	pageSize := req.PageSize
 	if page < 1 {
@@ -156,13 +173,12 @@ func (s *OrderServiceImpl) GetUserOrders(ctx context.Context, req *pb.GetUserOrd
 	offset := int((page - 1) * pageSize)
 	limit := int(pageSize)
 
-	orders, err := s.repo.GetOrdersByUserID(ctx, req.UserId, limit, offset)
+	orders, totalCountRaw, err := s.repo.GetOrdersByUserID(ctx, req.UserId, limit, offset)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "DATABASE_ERROR: Failed to get user orders: %v", err)
 	}
 
-	// TODO: получить total count из репозитория (добавить в сигнатуру)
-	totalCount := int32(len(orders)) // временно
+	totalCount := int32(totalCountRaw)
 
 	pbOrders := make([]*pb.Order, len(orders))
 	for i, order := range orders {
@@ -252,7 +268,15 @@ func (s *OrderServiceImpl) UpdateOrder(ctx context.Context, req *pb.UpdateOrderR
 }
 
 func (s *OrderServiceImpl) GetOrderStats(ctx context.Context, req *pb.GetOrderStatsRequest) (*pb.GetOrderStatsResponse, error) {
-	orders, err := s.repo.GetOrdersByUserID(ctx, req.UserId, 1000, 0)
+	userID, isAdmin, err := s.getUserInfoFromContext(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "UNAUTHORIZED: %v", err)
+	}
+	if !isAdmin && req.UserId != userID {
+		return nil, status.Errorf(codes.PermissionDenied, "FORBIDDEN: Access denied")
+	}
+
+	orders, _, err := s.repo.GetOrdersByUserID(ctx, req.UserId, 1000, 0)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "DATABASE_ERROR: Failed to get order stats: %v", err)
 	}
@@ -302,65 +326,6 @@ func (s *OrderServiceImpl) validateCreateOrderRequest(req *pb.CreateOrderRequest
 	return nil
 }
 
-/*
-func (s *OrderServiceImpl) validateProductAvailability(ctx context.Context, items []*pb.OrderItem) error {
-	products := make([]*product_pb.ProductQuantity, len(items))
-	for i, item := range items {
-		products[i] = &product_pb.ProductQuantity{
-			ProductId: item.ProductId,
-			Quantity:  item.Quantity,
-		}
-	}
-
-	resp, err := s.productClient.ValidateProducts(ctx, &product_pb.ValidateProductsRequest{
-		Products: products,
-	})
-	if err != nil {
-		return fmt.Errorf("product service error: %w", err)
-	}
-
-	if !resp.AllAvailable {
-		return s.buildUnavailableError(resp.UnavailableProducts)
-	}
-
-	return nil
-}
-
-func (s *OrderServiceImpl) fetchProductInfo(ctx context.Context, items []*pb.OrderItem) (map[int64]float64, map[int64]string, error) {
-	productIDs := make([]int64, len(items))
-	for i, item := range items {
-		productIDs[i] = item.ProductId
-	}
-
-	resp, err := s.productClient.GetProducts(ctx, &product_pb.GetProductsRequest{
-		ProductIds: productIDs,
-	})
-	if err != nil {
-		return nil, nil, err
-	}
-
-	prices := make(map[int64]float64)
-	names := make(map[int64]string)
-	for _, product := range resp.Products {
-		prices[product.Id] = product.Price
-		names[product.Id] = product.Name
-	}
-
-	return prices, names, nil
-}
-
-func (s *OrderServiceImpl) buildUnavailableError(unavailable []*product_pb.UnavailableProduct) error {
-	msg := "Products unavailable: "
-	for i, p := range unavailable {
-		if i > 0 {
-			msg += ", "
-		}
-		msg += fmt.Sprintf("product_id=%d (%s)", p.ProductId, p.Reason)
-	}
-	return errors.New(msg)
-}
-*/
-
 func (s *OrderServiceImpl) isValidStatus(status string) bool {
 	validStatuses := map[string]bool{
 		"pending": true, "confirmed": true, "processing": true,
@@ -370,13 +335,29 @@ func (s *OrderServiceImpl) isValidStatus(status string) bool {
 }
 
 func (s *OrderServiceImpl) getUserInfoFromContext(ctx context.Context) (userID int64, isAdmin bool, err error) {
-	// TODO: извлечь из gRPC metadata (пробрасывается от Envoy)
-	// md, ok := metadata.FromIncomingContext(ctx)
-	// userIDStr := md.Get("x-user-id")[0]
-	// role := md.Get("x-user-role")[0]
-	// return userID, role == "admin", nil
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return 0, false, errors.New("metadata is missing")
+	}
 
-	return 0, false, errors.New("not implemented")
+	vals := md.Get("x-user-id")
+	if len(vals) == 0 {
+		return 0, false, errors.New("x-user-id header is missing")
+	}
+
+	id, err := strconv.ParseInt(vals[0], 10, 64)
+	if err != nil {
+		return 0, false, fmt.Errorf("invalid x-user-id header: %v", err)
+	}
+
+	// Check role
+	roles := md.Get("x-user-role")
+	isAdmin = false
+	if len(roles) > 0 && roles[0] == "admin" {
+		isAdmin = true
+	}
+
+	return id, isAdmin, nil
 }
 
 func (s *OrderServiceImpl) orderToProto(order *model.Order) *pb.Order {
@@ -400,3 +381,4 @@ func (s *OrderServiceImpl) orderToProto(order *model.Order) *pb.Order {
 		UpdatedAt:   timestamppb.New(order.UpdatedAt),
 	}
 }
+

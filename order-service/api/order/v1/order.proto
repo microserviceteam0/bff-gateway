@@ -21,7 +21,7 @@ service OrderService {
 message Order {
   int64 id = 1;
   int64 user_id = 2;
-  string status = 3; // "pending", "confirmed", "cancelled", "completed"
+  string status = 3;
   repeated OrderItem items = 4;
   double total_amount = 5;
   google.protobuf.Timestamp created_at = 6;
@@ -70,7 +70,7 @@ message CancelOrderResponse {
 
 message UpdateOrderRequest {
   int64 order_id = 1;
-  int64 user_id = 2; // для проверки ownership
+  int64 user_id = 2;
   optional string status = 3;
   optional string cancellation_reason = 4;
 }
