@@ -28,13 +28,11 @@ func (a *UserAdapter) ValidateCredentials(email, password string) (*struct {
 	Email string
 	Role  string
 }, error) {
-	// Вызываем метод основного UserService
 	user, err := a.userService.ValidateCredentials(email, password)
 	if err != nil {
 		return nil, err
 	}
 
-	// Адаптируем возвращаемую структуру
 	return &struct {
 		ID    int64
 		Email string
@@ -47,25 +45,20 @@ func (a *UserAdapter) ValidateCredentials(email, password string) (*struct {
 }
 
 func main() {
-	// Загрузка .env файла
 	if err := godotenv.Load(); err != nil {
 		log.Printf("Warning: .env file not found")
 	}
 
-	// Инициализация базы данных
 	db, err := initDB()
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	// Инициализация репозитория и сервиса пользователей
 	userRepo := repository.NewUserRepository(db)
 	userService := service.NewUserService(userRepo)
 
-	// Создаем адаптер для UserService
 	userAdapter := &UserAdapter{userService: userService}
 
-	// Конфигурация JWT
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
 		jwtSecret = "your-secret-key-change-in-production"
@@ -78,18 +71,14 @@ func main() {
 		}
 	}
 
-	// Инициализация сервиса аутентификации
-	// Теперь передаем userAdapter, а не userService напрямую
 	authService := auth_service.NewAuthService(userAdapter, jwtSecret, tokenDuration)
 
-	// Настройка Gin
 	if os.Getenv("GIN_MODE") == "release" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
 	r := gin.Default()
 
-	// Добавляем CORS middleware если нужно
 	r.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -104,9 +93,7 @@ func main() {
 		c.Next()
 	})
 
-	// Health check
 	r.GET("/health", func(c *gin.Context) {
-		// Проверяем подключение к БД
 		dbStatus := "healthy"
 		if db != nil {
 			sqlDB, err := db.DB()
@@ -131,14 +118,12 @@ func main() {
 		})
 	})
 
-	// Инициализация обработчиков и регистрация маршрутов
 	authHandler := handler.NewAuthHandler(authService)
 	authHandler.RegisterRoutes(r)
 
-	// Запуск сервера
 	port := os.Getenv("AUTH_PORT")
 	if port == "" {
-		port = "8082"
+		port = "8084"
 	}
 
 	log.Printf("Auth service starting on port %s", port)

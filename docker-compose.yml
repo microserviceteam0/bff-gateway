@@ -127,11 +127,88 @@ services:
       - bff-network
     restart: unless-stopped
 
+  user-db:
+    image: postgres:17
+    container_name: user-db
+    environment:
+      POSTGRES_USER: user_user
+      POSTGRES_PASSWORD: user_password
+      POSTGRES_DB: users_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - user-data:/var/lib/postgresql/data
+    networks:
+      - bff-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U user_user -d users_db" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  user-service:
+    build:
+      context: .
+      dockerfile: user/Dockerfile
+    container_name: user-service
+    environment:
+      DATABASE_URL: postgres://user_user:user_password@user-db:5432/users_db?sslmode=disable
+      DB_HOST: user-db
+      DB_PORT: "5432"
+      DB_USER: user_user
+      DB_PASSWORD: user_password
+      DB_NAME: users_db
+      APP_PORT: "8081"
+      GRPC_PORT: "50053"
+      ENVIRONMENT: development
+    ports:
+      - "8081:8081"
+      - "50053:50053"
+    depends_on:
+      user-db:
+        condition: service_healthy
+    networks:
+      - bff-network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8081/health" ]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: user/Dockerfile-auth
+    container_name: auth-service
+    environment:
+      AUTH_PORT: 8084
+      DB_HOST: user-db
+      DB_PORT: "5432"
+      DB_USER: user_user
+      DB_PASSWORD: user_password
+      DB_NAME: users_db
+      JWT_SECRET: BF7FD11ACE545745B7BA1AF98B6F156D127BC7BB544BAB6A4FD74E4FC7
+      TOKEN_DURATION_HOURS: "24"
+    ports:
+      - "8084:8084"
+    depends_on:
+      user-db:
+        condition: service_healthy
+    networks:
+      - bff-network
+    restart: unless-stopped
+
+
 volumes:
   product-data:
   order-data:
   prometheus-data:
   grafana-data:
+  user-data:
 
 networks:
   bff-network:
