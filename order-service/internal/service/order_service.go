@@ -5,10 +5,9 @@ import (
 	"errors"
 	"fmt"
 	pb "order-service/api/order/v1"
-	"order-service/pkg/clients/product"
-
 	"order-service/internal/model"
 	"order-service/internal/repository"
+	productpb "order-service/pkg/api/product/v1"
 	"strconv"
 	"time"
 
@@ -21,6 +20,10 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type ProductClient interface {
+	GetProducts(ctx context.Context, ids []int64) (map[int64]*productpb.ProductResponse, error)
+}
+
 type OrderService interface {
 	CreateOrder(ctx context.Context, req *pb.CreateOrderRequest) (*pb.CreateOrderResponse, error)
 	GetOrder(ctx context.Context, req *pb.GetOrderRequest) (*pb.GetOrderResponse, error)
@@ -32,12 +35,12 @@ type OrderService interface {
 
 type OrderServiceImpl struct {
 	repo          repository.OrderRepository
-	productClient *product.Client
+	productClient ProductClient
 }
 
 func NewOrderService(
 	repo repository.OrderRepository,
-	productClient *product.Client,
+	productClient ProductClient,
 ) OrderService {
 	return &OrderServiceImpl{
 		repo:          repo,
@@ -399,4 +402,3 @@ func (s *OrderServiceImpl) orderToProto(order *model.Order) *pb.Order {
 		UpdatedAt:   timestamppb.New(order.UpdatedAt),
 	}
 }
-

@@ -34,8 +34,6 @@ func (c *Client) Close() error {
 	return c.conn.Close()
 }
 
-// GetProducts fetches products by their IDs.
-// It returns a map of product details for easier lookup.
 func (c *Client) GetProducts(ctx context.Context, ids []int64) (map[int64]*pb.ProductResponse, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()

@@ -1,14 +1,12 @@
-# Stage 1: Builder
-FROM golang:1.24-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
-WORKDIR /app
+WORKDIR /build
 
-COPY go.mod .
-COPY go.sum .
+COPY order-service/ ./order-service/
+
+WORKDIR /build/order-service
 
 RUN go mod download
-
-COPY . .
 
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /app/orderservice ./cmd/orderservice
 

@@ -3,12 +3,12 @@ package main
 import (
 	"log/slog"
 	"net"
+	"order-service/internal/config"
 	"order-service/internal/model"
 	"order-service/internal/repository"
 	"order-service/internal/service"
 	"order-service/pkg/clients/product"
 	"os"
-	"strconv"
 	"time"
 
 	pb "order-service/api/order/v1"
@@ -19,11 +19,6 @@ import (
 	"gorm.io/gorm"
 )
 
-const (
-	defaultGRPCPort = 50051
-	defaultDBDSN    = "host=localhost user=gorm password=gorm dbname=gorm port=9920 sslmode=disable"
-)
-
 func main() {
 	// 1. Initialize Logger
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
@@ -32,22 +27,11 @@ func main() {
 
 	slog.Info("Starting Order Service...")
 
-	// 2. Load Configuration (GRPC Port, DB DSN)
-	grpcPortStr := os.Getenv("GRPC_PORT")
-	grpcPort, err := strconv.Atoi(grpcPortStr)
-	if err != nil || grpcPort == 0 {
-		grpcPort = defaultGRPCPort
-		slog.Warn("GRPC_PORT environment variable not set or invalid, using default port", "port", defaultGRPCPort)
-	}
-
-	dbDSN := os.Getenv("DATABASE_URL")
-	if dbDSN == "" {
-		dbDSN = defaultDBDSN
-		slog.Warn("DATABASE_URL environment variable not set, using default example DSN. Please configure DATABASE_URL for production.", "dsn", defaultDBDSN)
-	}
+	// 2. Load Configuration
+	cfg := config.Load()
 
 	// 3. Initialize Database (PostgreSQL)
-	db, err := gorm.Open(postgres.Open(dbDSN), &gorm.Config{
+	db, err := gorm.Open(postgres.Open(cfg.DatabaseURL), &gorm.Config{
 		NowFunc: func() time.Time {
 			return time.Now().UTC()
 		},
@@ -71,13 +55,7 @@ func main() {
 	slog.Info("Order Repository initialized.")
 
 	// 5. Initialize Product Service Client
-	productServiceURL := os.Getenv("PRODUCT_SERVICE_URL")
-	if productServiceURL == "" {
-		productServiceURL = "localhost:50052"
-		slog.Warn("PRODUCT_SERVICE_URL not set, using default", "url", productServiceURL)
-	}
-
-	productClient, err := product.NewClient(productServiceURL)
+	productClient, err := product.NewClient(cfg.ProductServiceURL)
 	if err != nil {
 		slog.Error("Failed to initialize Product Service client", "error", err)
 		os.Exit(1)
@@ -90,9 +68,9 @@ func main() {
 	slog.Info("Order Service initialized.")
 
 	// 7. Setup gRPC Server
-	lis, err := net.Listen("tcp", ":"+strconv.Itoa(grpcPort))
+	lis, err := net.Listen("tcp", ":"+cfg.GRPCPort)
 	if err != nil {
-		slog.Error("Failed to listen", "port", grpcPort, "error", err)
+		slog.Error("Failed to listen", "port", cfg.GRPCPort, "error", err)
 		os.Exit(1)
 	}
 	slog.Info("gRPC server listening", "address", lis.Addr().String())
