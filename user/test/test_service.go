@@ -1,10 +1,9 @@
-// test_service_main.go
 package main
 
 import (
 	"fmt"
 	"log"
-	"user/internal/app/service"
+	"user/internal/app/user_service"
 	"user/internal/domain/repository"
 
 	"gorm.io/driver/postgres"
@@ -19,9 +18,8 @@ func main() {
 	}
 
 	repo := repository.NewUserRepository(db)
-	userService := service.NewUserService(repo)
+	userService := user_service.NewUserService(repo)
 
-	// Тест создания пользователя
 	fmt.Println("=== Тест создания пользователя ===")
 	user, err := userService.CreateUser(
 		"John Doe",
@@ -37,7 +35,6 @@ func main() {
 			user.ID, user.Name, user.Email)
 	}
 
-	// Тест поиска по email
 	fmt.Println("\n=== Тест поиска по email ===")
 	foundUser, err := userService.GetUserByEmail("john@example.com")
 	if err != nil {

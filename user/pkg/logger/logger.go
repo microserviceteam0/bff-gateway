@@ -26,7 +26,6 @@ func Init(env string) error {
 		return err
 	}
 
-	// Заменяем глобальный логгер
 	zap.ReplaceGlobals(Log)
 	return nil
 }

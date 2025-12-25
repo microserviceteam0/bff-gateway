@@ -12,7 +12,7 @@ type Config struct {
 	DBPassword  string
 	DBName      string
 	AppPort     string
-	GRPCPort    string // Добавляем GRPC порт
+	GRPCPort    string
 	Environment string
 }
 
@@ -26,7 +26,7 @@ func Load() *Config {
 		DBPassword:  getEnv("DB_PASSWORD", "postgres"),
 		DBName:      getEnv("DB_NAME", "user_service"),
 		AppPort:     getEnv("APP_PORT", "8080"),
-		GRPCPort:    getEnv("GRPC_PORT", "50051"), // Значение по умолчанию 50051
+		GRPCPort:    getEnv("GRPC_PORT", "50051"),
 		Environment: getEnv("ENVIRONMENT", "development"),
 	}
 

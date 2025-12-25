@@ -4,23 +4,20 @@ import (
 	"context"
 	"log"
 	userv1 "user/api/proto"
-	"user/internal/app/service"
+	"user/internal/app/user_service"
 )
 
-// Server реализует gRPC сервер для UserService
 type Server struct {
 	userv1.UnimplementedUserServiceServer
-	userService service.UserService
+	userService user_service.UserService
 }
 
-// NewServer создаёт новый gRPC сервер
-func NewServer(userService service.UserService) *Server {
+func NewServer(userService user_service.UserService) *Server {
 	return &Server{
 		userService: userService,
 	}
 }
 
-// GetUser возвращает пользователя по ID
 func (s *Server) GetUser(ctx context.Context, req *userv1.GetUserRequest) (*userv1.GetUserResponse, error) {
 	log.Printf("gRPC GetUser called with ID: %d", req.UserId)
 
@@ -39,7 +36,6 @@ func (s *Server) GetUser(ctx context.Context, req *userv1.GetUserRequest) (*user
 	}, nil
 }
 
-// GetUserByEmail возвращает пользователя по email
 func (s *Server) GetUserByEmail(ctx context.Context, req *userv1.GetUserByEmailRequest) (*userv1.GetUserResponse, error) {
 	log.Printf("gRPC GetUserByEmail called with email: %s", req.Email)
 
@@ -58,7 +54,6 @@ func (s *Server) GetUserByEmail(ctx context.Context, req *userv1.GetUserByEmailR
 	}, nil
 }
 
-// GetUsers возвращает несколько пользователей по ID
 func (s *Server) GetUsers(ctx context.Context, req *userv1.GetUsersRequest) (*userv1.GetUsersResponse, error) {
 	log.Printf("gRPC GetUsers called with IDs: %v", req.UserIds)
 
@@ -80,7 +75,6 @@ func (s *Server) GetUsers(ctx context.Context, req *userv1.GetUsersRequest) (*us
 	}, nil
 }
 
-// UserExists проверяет существование пользователя
 func (s *Server) UserExists(ctx context.Context, req *userv1.UserExistsRequest) (*userv1.UserExistsResponse, error) {
 	log.Printf("gRPC UserExists called with ID: %d", req.UserId)
 
@@ -91,7 +85,6 @@ func (s *Server) UserExists(ctx context.Context, req *userv1.UserExistsRequest) 
 	}, nil
 }
 
-// ValidateCredentials проверяет учётные данные
 func (s *Server) ValidateCredentials(ctx context.Context, req *userv1.ValidateCredentialsRequest) (*userv1.ValidateCredentialsResponse, error) {
 	log.Printf("gRPC ValidateCredentials called for email: %s", req.Email)
 

@@ -22,7 +22,6 @@ func RunMigrations(cfg *config.Config) {
 	}
 	defer db.Close()
 
-	// Указываем папку с миграциями
 	if err := goose.Up(db, "./migrations"); err != nil {
 		log.Fatal("Migration failed:", err)
 	}

@@ -8,10 +8,10 @@ import (
 
 type UserRepository interface {
 	Create(user *entity.User) error
-	FindByID(id int64) (*entity.User, error) // изменил uint → int64
+	FindByID(id int64) (*entity.User, error)
 	FindByEmail(email string) (*entity.User, error)
 	Update(user *entity.User) error
-	Delete(id int64) error // изменил uint → int64
+	Delete(id int64) error
 	FindAll() ([]entity.User, error)
 }
 
@@ -27,7 +27,7 @@ func (r *userRepository) Create(user *entity.User) error {
 	return r.db.Create(user).Error
 }
 
-func (r *userRepository) FindByID(id int64) (*entity.User, error) { // int64
+func (r *userRepository) FindByID(id int64) (*entity.User, error) {
 	var user entity.User
 	err := r.db.First(&user, id).Error
 	return &user, err
@@ -43,7 +43,7 @@ func (r *userRepository) Update(user *entity.User) error {
 	return r.db.Save(user).Error
 }
 
-func (r *userRepository) Delete(id int64) error { // int64
+func (r *userRepository) Delete(id int64) error {
 	return r.db.Delete(&entity.User{}, id).Error
 }
 

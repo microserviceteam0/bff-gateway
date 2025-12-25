@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	// Подключаемся к gRPC серверу
+
 	conn, err := grpc.Dial("localhost:50051",
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithBlock(),
@@ -27,7 +27,6 @@ func main() {
 
 	fmt.Println("=== Testing gRPC API ===")
 
-	// Тест 1: Проверить существование пользователя
 	fmt.Println("\n1. Checking if user exists...")
 	existsResp, err := client.UserExists(context.Background(), &userv1.UserExistsRequest{UserId: 1})
 	if err != nil {
@@ -36,7 +35,6 @@ func main() {
 		fmt.Printf("User 1 exists: %v\n", existsResp.Exists)
 	}
 
-	// Тест 2: Получить пользователя по ID (если существует)
 	if existsResp.GetExists() {
 		fmt.Println("\n2. Getting user by ID...")
 		userResp, err := client.GetUser(context.Background(), &userv1.GetUserRequest{UserId: 1})
@@ -48,7 +46,6 @@ func main() {
 		}
 	}
 
-	// Тест 3: Проверить учётные данные
 	fmt.Println("\n3. Validating credentials...")
 	validResp, err := client.ValidateCredentials(context.Background(),
 		&userv1.ValidateCredentialsRequest{
@@ -65,7 +62,6 @@ func main() {
 		}
 	}
 
-	// Тест 4: Получить несколько пользователей
 	fmt.Println("\n4. Getting multiple users...")
 	usersResp, err := client.GetUsers(context.Background(),
 		&userv1.GetUsersRequest{UserIds: []int64{1, 2, 3}})

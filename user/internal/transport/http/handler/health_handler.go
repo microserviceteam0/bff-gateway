@@ -16,17 +16,8 @@ func NewHealthHandler(db *gorm.DB) *HealthHandler {
 	return &HealthHandler{db: db}
 }
 
-// HealthCheck проверяет работоспособность сервиса
-// @Summary Проверка здоровья сервиса
-// @Description Проверка статуса сервиса и подключения к базе данных
-// @Tags health
-// @Accept json
-// @Produce json
-// @Success 200 {object} map[string]interface{} "Сервис работает"
-// @Success 503 {object} map[string]interface{} "Сервис недоступен"
-// @Router /health [get]
 func (h *HealthHandler) HealthCheck(c *gin.Context) {
-	// Проверяем подключение к БД
+
 	dbStatus := "healthy"
 	if h.db != nil {
 		sqlDB, err := h.db.DB()

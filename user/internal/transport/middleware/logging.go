@@ -8,7 +8,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// RequestID добавляет уникальный ID к каждому запросу
 func RequestID() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		requestID := c.GetHeader("X-Request-ID")
@@ -22,16 +21,13 @@ func RequestID() gin.HandlerFunc {
 	}
 }
 
-// LoggingMiddleware логирует все входящие запросы
 func LoggingMiddleware(logger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Засекаем время начала обработки
+
 		start := time.Now()
 
-		// Получаем request ID
 		requestID, _ := c.Get("request_id")
 
-		// Логируем начало обработки
 		logger.Info("request started",
 			zap.String("request_id", requestID.(string)),
 			zap.String("method", c.Request.Method),
@@ -39,10 +35,8 @@ func LoggingMiddleware(logger *zap.Logger) gin.HandlerFunc {
 			zap.String("client_ip", c.ClientIP()),
 		)
 
-		// Передаём управление следующему middleware/handler
 		c.Next()
 
-		// Логируем завершение
 		duration := time.Since(start)
 
 		logger.Info("request completed",
