@@ -13,6 +13,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"github.com/microserviceteam0/bff-gateway/shared/metrics"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -78,6 +79,8 @@ func main() {
 	}
 
 	r := gin.Default()
+
+	r.Use(metrics.GinMetricsMiddleware("auth-service"))
 
 	r.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")

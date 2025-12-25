@@ -24,6 +24,7 @@ import (
 	_ "user/api/docs"
 
 	"github.com/gin-gonic/gin"
+	"github.com/microserviceteam0/bff-gateway/shared/metrics"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/zap"
@@ -112,6 +113,7 @@ func setupHTTPRouter(userHandler *handler.UserHandler, healthHandler *handler.He
 	router.Use(middleware.RequestID())
 	router.Use(middleware.LoggingMiddleware(logger))
 	router.Use(middleware.RecoveryMiddleware(logger))
+	router.Use(metrics.GinMetricsMiddleware("user-service"))
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
