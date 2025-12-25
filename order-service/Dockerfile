@@ -2,6 +2,7 @@ FROM golang:1.25-alpine AS builder
 
 WORKDIR /build
 
+COPY shared/ ./shared/
 COPY order-service/ ./order-service/
 
 WORKDIR /build/order-service
@@ -16,6 +17,6 @@ WORKDIR /app
 
 COPY --from=builder /app/orderservice .
 
-EXPOSE 50051
+EXPOSE 50051 8082
 
 ENTRYPOINT ["/app/orderservice"]

@@ -6,6 +6,7 @@ import (
 
 type Config struct {
 	GRPCPort          string
+	MonitoringPort    string
 	DatabaseURL       string
 	ProductServiceURL string
 }
@@ -13,6 +14,7 @@ type Config struct {
 func Load() *Config {
 	return &Config{
 		GRPCPort:          getEnv("GRPC_PORT", "50051"),
+		MonitoringPort:    getEnv("MONITORING_PORT", "8082"),
 		DatabaseURL:       getEnv("DATABASE_URL", "postgres://order_user:order_password@localhost:5434/orders_db?sslmode=disable"),
 		ProductServiceURL: getEnv("PRODUCT_SERVICE_URL", "localhost:50051"),
 	}

@@ -2,9 +2,11 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"order-service/internal/model"
 
+	"github.com/microserviceteam0/bff-gateway/shared/metrics"
 	"gorm.io/gorm"
 )
 
@@ -26,11 +28,17 @@ func NewOrderRepository(db *gorm.DB) OrderRepository {
 
 // CreateOrder implements OrderRepository.
 func (o *OrderRepositoryImpl) CreateOrder(ctx context.Context, order *model.Order) (*model.Order, error) {
+	start := time.Now()
 	err := o.db.
 		WithContext(ctx).
 		Create(order).
 		Error
+
+	duration := time.Since(start).Seconds()
+	metrics.DBQueryDuration.WithLabelValues("order-service", "INSERT").Observe(duration)
+
 	if err != nil {
+		metrics.DBErrors.WithLabelValues("order-service", "INSERT").Inc()
 		return nil, err
 	}
 
@@ -39,13 +47,19 @@ func (o *OrderRepositoryImpl) CreateOrder(ctx context.Context, order *model.Orde
 
 // GetOrder implements OrderRepository.
 func (o *OrderRepositoryImpl) GetOrder(ctx context.Context, orderID int64) (*model.Order, error) {
+	start := time.Now()
 	var order model.Order
 	err := o.db.
 		WithContext(ctx).
 		Preload("Items").
 		First(&order, orderID).
 		Error
+
+	duration := time.Since(start).Seconds()
+	metrics.DBQueryDuration.WithLabelValues("order-service", "SELECT").Observe(duration)
+
 	if err != nil {
+		metrics.DBErrors.WithLabelValues("order-service", "SELECT").Inc()
 		return nil, err
 	}
 	return &order, err
@@ -53,12 +67,14 @@ func (o *OrderRepositoryImpl) GetOrder(ctx context.Context, orderID int64) (*mod
 
 // GetOrdersByUserID implements OrderRepository.
 func (o *OrderRepositoryImpl) GetOrdersByUserID(ctx context.Context, userID int64, limit int, offset int) ([]model.Order, int64, error) {
+	start := time.Now()
 	var orders []model.Order
 	var total int64
 
 	query := o.db.WithContext(ctx).Model(&model.Order{}).Where("user_id = ?", userID)
 
 	if err := query.Count(&total).Error; err != nil {
+		metrics.DBErrors.WithLabelValues("order-service", "SELECT").Inc()
 		return nil, 0, err
 	}
 
@@ -69,7 +85,12 @@ func (o *OrderRepositoryImpl) GetOrdersByUserID(ctx context.Context, userID int6
 		Offset(offset).
 		Find(&orders).
 		Error
+
+	duration := time.Since(start).Seconds()
+	metrics.DBQueryDuration.WithLabelValues("order-service", "SELECT").Observe(duration)
+
 	if err != nil {
+		metrics.DBErrors.WithLabelValues("order-service", "SELECT").Inc()
 		return nil, 0, err
 	}
 	return orders, total, nil
@@ -77,11 +98,17 @@ func (o *OrderRepositoryImpl) GetOrdersByUserID(ctx context.Context, userID int6
 
 // UpdateOrder implements OrderRepository.
 func (o *OrderRepositoryImpl) UpdateOrder(ctx context.Context, order *model.Order) error {
+	start := time.Now()
 	err := o.db.
 		WithContext(ctx).
 		Save(order).
 		Error
+
+	duration := time.Since(start).Seconds()
+	metrics.DBQueryDuration.WithLabelValues("order-service", "UPDATE").Observe(duration)
+
 	if err != nil {
+		metrics.DBErrors.WithLabelValues("order-service", "UPDATE").Inc()
 		return err
 	}
 	return nil
@@ -89,11 +116,17 @@ func (o *OrderRepositoryImpl) UpdateOrder(ctx context.Context, order *model.Orde
 
 // Delete implements OrderRepository.
 func (o *OrderRepositoryImpl) Delete(ctx context.Context, orderID int64) error {
+	start := time.Now()
 	err := o.db.
 		WithContext(ctx).
 		Delete(&model.Order{}, orderID).
 		Error
+
+	duration := time.Since(start).Seconds()
+	metrics.DBQueryDuration.WithLabelValues("order-service", "DELETE").Observe(duration)
+
 	if err != nil {
+		metrics.DBErrors.WithLabelValues("order-service", "DELETE").Inc()
 		return err
 	}
 
