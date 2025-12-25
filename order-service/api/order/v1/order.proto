@@ -1,0 +1,123 @@
+syntax = "proto3";
+
+package order.v1;
+
+option go_package = "order-service/api/order/v1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+service OrderService {
+  rpc CreateOrder (CreateOrderRequest) returns (CreateOrderResponse);
+  rpc CancelOrder (CancelOrderRequest) returns (CancelOrderResponse);
+  rpc UpdateOrder (UpdateOrderRequest) returns (UpdateOrderResponse);
+  rpc GetOrder (GetOrderRequest) returns (GetOrderResponse);
+  rpc GetUserOrders (GetUserOrdersRequest) returns (GetUserOrdersResponse);
+  
+  rpc GetOrderStats (GetOrderStatsRequest) returns (GetOrderStatsResponse);
+}
+
+// Models
+message Order {
+  int64 id = 1;
+  int64 user_id = 2;
+  string status = 3;
+  repeated OrderItem items = 4;
+  double total_amount = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+  string cancellation_reason = 8;
+}
+
+message OrderItem {
+  int64 product_id = 1;
+  int32 quantity = 2;
+  double price = 3;
+  string product_name = 4;
+}
+
+message Error {
+  string code = 1;
+  string message = 2;
+  map<string, string> details = 3;
+}
+
+// Request/Response
+message CreateOrderRequest {
+  int64 user_id = 1;
+  repeated OrderItem items = 2;
+}
+
+message CreateOrderResponse {
+  oneof result {
+    int64 order_id = 1;
+    Error error = 2;
+  }
+}
+
+message CancelOrderRequest {
+  int64 order_id = 1;
+  int64 user_id = 2;
+  string reason = 3;
+}
+
+message CancelOrderResponse {
+  oneof result {
+    google.protobuf.Empty success = 1;
+    Error error = 2;
+  }
+}
+
+message UpdateOrderRequest {
+  int64 order_id = 1;
+  int64 user_id = 2;
+  optional string status = 3;
+  optional string cancellation_reason = 4;
+}
+
+message UpdateOrderResponse {
+  oneof result {
+    google.protobuf.Empty success = 1;
+    Error error = 2;
+  }
+}
+
+message GetOrderRequest {
+  int64 order_id = 1;
+}
+
+message GetOrderResponse {
+  oneof result {
+    Order order = 1;
+    Error error = 2;
+  }
+}
+
+message GetUserOrdersRequest {
+  int64 user_id = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+  optional string status = 4;
+  optional google.protobuf.Timestamp from_date = 5;
+  optional google.protobuf.Timestamp to_date = 6;
+}
+
+message GetUserOrdersResponse {
+  repeated Order orders = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message GetOrderStatsRequest {
+  int64 user_id = 1;
+}
+
+message GetOrderStatsResponse {
+  int32 total_orders = 1;
+  int32 active_orders = 2;
+  double total_spent = 3;
+  google.protobuf.Timestamp last_order_date = 4;
+}
+
+

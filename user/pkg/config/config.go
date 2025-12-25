@@ -1,8 +1,9 @@
 package config
 
 import (
-	"github.com/joho/godotenv"
 	"os"
+
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -20,13 +21,13 @@ func Load() *Config {
 	godotenv.Load()
 
 	config := &Config{
-		DBHost:      getEnv("DB_HOST", "localhost"),
+		DBHost:      getEnv("DB_HOST", "user-db"),
 		DBPort:      getEnv("DB_PORT", "5432"),
-		DBUser:      getEnv("DB_USER", "postgres"),
-		DBPassword:  getEnv("DB_PASSWORD", "postgres"),
-		DBName:      getEnv("DB_NAME", "user_service"),
-		AppPort:     getEnv("APP_PORT", "8080"),
-		GRPCPort:    getEnv("GRPC_PORT", "50051"),
+		DBUser:      getEnv("DB_USER", "user_user"),
+		DBPassword:  getEnv("DB_PASSWORD", "user_password"),
+		DBName:      getEnv("DB_NAME", "users_db"),
+		AppPort:     getEnv("APP_PORT", "8081"),
+		GRPCPort:    getEnv("GRPC_PORT", "50053"), // Значение по умолчанию 50051
 		Environment: getEnv("ENVIRONMENT", "development"),
 	}
 

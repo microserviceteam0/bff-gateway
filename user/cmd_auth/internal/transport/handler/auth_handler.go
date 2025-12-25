@@ -1,4 +1,3 @@
-// cmd_auth/internal/app/handler/auth_handler.go
 package handler
 
 import (

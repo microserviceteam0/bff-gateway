@@ -12,7 +12,7 @@ RUN go mod download
 COPY user/. .
 
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-w -s" \
-    -o /app/user-service ./cmd/main.go
+    -o /app/auth-service ./cmd_auth/main.go
 
 # ---------- Stage 2: runtime ----------
 FROM alpine:latest
@@ -25,15 +25,10 @@ RUN addgroup -g 1000 appuser && \
 
 WORKDIR /app
 
-COPY --from=builder /app/user-service .
-COPY --from=builder /app/migrations ./migrations
-COPY --from=builder /app/.env.example ./
-
-RUN chown -R appuser:appuser /app
+COPY --from=builder /app/auth-service .
 
 USER appuser
 
-EXPOSE 8081
-EXPOSE 50053
+EXPOSE 8084
 
-CMD ["./user-service"]
+CMD ["./auth-service"]
