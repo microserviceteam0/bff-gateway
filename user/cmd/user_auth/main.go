@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/microserviceteam0/bff-gateway/shared/metrics"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -82,6 +83,8 @@ func main() {
 
 	r.Use(metrics.GinMetricsMiddleware("auth-service"))
 
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
 	r.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -127,7 +130,7 @@ func main() {
 
 	port := os.Getenv("AUTH_PORT")
 	if port == "" {
-		port = "8082"
+		port = "8084"
 	}
 
 	log.Printf("Auth user_service starting on port %s", port)

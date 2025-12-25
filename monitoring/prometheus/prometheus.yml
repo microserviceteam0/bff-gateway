@@ -21,3 +21,23 @@ scrape_configs:
     metrics_path: '/metrics'
     scrape_interval: 10s
     scrape_timeout: 5s
+
+  - job_name: 'user-service'
+    static_configs:
+      - targets: [ 'user-service:8081' ]
+        labels:
+          service: 'user-service'
+          tier: 'backend'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  - job_name: 'auth-service'
+    static_configs:
+      - targets: [ 'auth-service:8084' ]
+        labels:
+          service: 'auth-service'
+          tier: 'backend'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 5s

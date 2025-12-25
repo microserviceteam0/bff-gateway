@@ -1,23 +1,28 @@
 # ---------- Stage 1: build ----------
-FROM golang:1.24-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
-RUN apk add --no-cache git ca-certificates tzdata && \
+RUN apk add --no-cache git ca-certificates tzdata wget && \
     update-ca-certificates
 
-WORKDIR /app
+WORKDIR /build
 
-COPY user/go.mod user/go.sum ./
+COPY shared/ ./shared/
+COPY user/ ./user/
+
+WORKDIR /build/user
+
 RUN go mod download
 
-COPY user/. .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags="-w -s" \
+    -o /app/bin/user-service \
+    ./cmd/user/main.go
 
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-w -s" \
-    -o /app/user-service ./cmd/main.go
 
 # ---------- Stage 2: runtime ----------
 FROM alpine:latest
 
-RUN apk --no-cache add ca-certificates tzdata && \
+RUN apk --no-cache add ca-certificates tzdata wget && \
     update-ca-certificates
 
 RUN addgroup -g 1000 appuser && \
@@ -25,15 +30,17 @@ RUN addgroup -g 1000 appuser && \
 
 WORKDIR /app
 
-COPY --from=builder /app/user-service .
-COPY --from=builder /app/migrations ./migrations
-COPY --from=builder /app/.env.example ./
+COPY --from=builder /app/bin/user-service /app/user-service
+COPY --from=builder /build/user/migrations /app/migrations
+COPY --from=builder /build/user/.env.example /app/.env.example
 
 RUN chown -R appuser:appuser /app
 
 USER appuser
 
-EXPOSE 8081
-EXPOSE 50053
+EXPOSE 8081 50051
 
-CMD ["./user-service"]
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD wget --quiet --tries=1 --spider http://localhost:8081/health || exit 1
+
+ENTRYPOINT ["/app/user-service"]
