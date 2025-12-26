@@ -1,0 +1,350 @@
+basePath: /api/v1
+definitions:
+  dto.CancelOrderRequestDTO:
+    properties:
+      reason:
+        type: string
+    type: object
+  dto.CreateOrderItemDTO:
+    properties:
+      product_id:
+        type: integer
+      quantity:
+        type: integer
+    type: object
+  dto.CreateOrderRequestDTO:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/dto.CreateOrderItemDTO'
+        type: array
+    type: object
+  dto.LoginRequestDTO:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  dto.LoginResponseDTO:
+    properties:
+      token:
+        type: string
+    type: object
+  dto.OrderItemDTO:
+    properties:
+      product_id:
+        type: integer
+      product_name:
+        type: string
+      quantity:
+        type: integer
+      unit_price:
+        type: number
+    type: object
+  dto.OrderResponseDTO:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/dto.OrderItemDTO'
+        type: array
+      status:
+        type: string
+      total_sum:
+        description: В proto это может быть int/string, тут для JS удобнее float/string
+        type: number
+      user:
+        $ref: '#/definitions/dto.UserSummaryDTO'
+    type: object
+  dto.ProductResponseDTO:
+    properties:
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      price:
+        type: number
+      quantity:
+        description: Доступный остаток
+        type: integer
+    type: object
+  dto.RegisterUserRequestDTO:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+    type: object
+  dto.UserResponseDTO:
+    properties:
+      email:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  dto.UserSummaryDTO:
+    properties:
+      email:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: This is the BFF Gateway for the Microservices E-commerce App.
+  title: BFF Gateway API
+  version: "1.0"
+paths:
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Login user and get token
+      parameters:
+      - description: Login info
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LoginRequestDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.LoginResponseDTO'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login user
+      tags:
+      - auth
+  /orders:
+    post:
+      consumes:
+      - application/json
+      description: Create a new order for the authenticated user
+      parameters:
+      - description: Order info
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateOrderRequestDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.OrderResponseDTO'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new order
+      tags:
+      - orders
+  /orders/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get order details by ID
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.OrderResponseDTO'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get order details
+      tags:
+      - orders
+  /orders/{id}/cancel:
+    post:
+      consumes:
+      - application/json
+      description: Cancel an order by ID
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Cancellation reason
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CancelOrderRequestDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cancel an order
+      tags:
+      - orders
+  /products:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all products
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.ProductResponseDTO'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List all products
+      tags:
+      - products
+  /profile:
+    get:
+      consumes:
+      - application/json
+      description: Get current user profile
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UserResponseDTO'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user profile
+      tags:
+      - users
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user
+      parameters:
+      - description: User registration info
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RegisterUserRequestDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.UserResponseDTO'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register a new user
+      tags:
+      - auth
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

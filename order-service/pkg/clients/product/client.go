@@ -54,3 +54,23 @@ func (c *Client) GetProducts(ctx context.Context, ids []int64) (map[int64]*pb.Pr
 
 	return productMap, nil
 }
+
+func (c *Client) CheckStock(ctx context.Context, productID int64, quantity int32) (*pb.CheckStockResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	return c.Service.CheckStock(ctx, &pb.CheckStockRequest{
+		ProductId: productID,
+		Quantity:  quantity,
+	})
+}
+
+func (c *Client) UpdateStock(ctx context.Context, productID int64, quantityDelta int32) (*pb.UpdateStockResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	return c.Service.UpdateStock(ctx, &pb.UpdateStockRequest{
+		ProductId:     productID,
+		QuantityDelta: quantityDelta,
+	})
+}

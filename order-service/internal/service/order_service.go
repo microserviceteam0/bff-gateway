@@ -22,6 +22,8 @@ import (
 
 type ProductClient interface {
 	GetProducts(ctx context.Context, ids []int64) (map[int64]*productpb.ProductResponse, error)
+	CheckStock(ctx context.Context, productID int64, quantity int32) (*productpb.CheckStockResponse, error)
+	UpdateStock(ctx context.Context, productID int64, quantityDelta int32) (*productpb.UpdateStockResponse, error)
 }
 
 type OrderService interface {
@@ -125,6 +127,21 @@ func (s *OrderServiceImpl) CreateOrder(ctx context.Context, req *pb.CreateOrderR
 		totalAmount += product.Price * float64(item.Quantity)
 	}
 
+	// 3. Update stock for each item
+	updatedItems := make([]int, 0)
+	for i, item := range orderItems {
+		_, err := s.productClient.UpdateStock(ctx, item.ProductID, -int32(item.Quantity))
+		if err != nil {
+			// Rollback previously updated items
+			for _, idx := range updatedItems {
+				prevItem := orderItems[idx]
+				_, _ = s.productClient.UpdateStock(ctx, prevItem.ProductID, int32(prevItem.Quantity))
+			}
+			return nil, status.Errorf(codes.InvalidArgument, "STOCK_ERROR: Product %d: %v", item.ProductID, err)
+		}
+		updatedItems = append(updatedItems, i)
+	}
+
 	order := &model.Order{
 		UserID:      req.UserId,
 		Status:      "pending",
@@ -136,6 +153,10 @@ func (s *OrderServiceImpl) CreateOrder(ctx context.Context, req *pb.CreateOrderR
 
 	createdOrder, err := s.repo.CreateOrder(ctx, order)
 	if err != nil {
+		for _, idx := range updatedItems {
+			item := orderItems[idx]
+			_, _ = s.productClient.UpdateStock(ctx, item.ProductID, int32(item.Quantity))
+		}
 		return nil, status.Errorf(codes.Internal, "DATABASE_ERROR: Failed to create order: %v", err)
 	}
 
@@ -243,6 +264,14 @@ func (s *OrderServiceImpl) CancelOrder(ctx context.Context, req *pb.CancelOrderR
 		return nil, status.Errorf(codes.Internal, "DATABASE_ERROR: Failed to cancel order: %v", err)
 	}
 
+	for _, item := range order.Items {
+		_, err := s.productClient.UpdateStock(ctx, item.ProductID, int32(item.Quantity))
+		if err != nil {
+			// Log error but don't fail the cancellation as the status is already updated in DB
+			fmt.Printf("FAILED_TO_RESTORE_STOCK: product_id=%d, quantity=%d, error=%v\n", item.ProductID, item.Quantity, err)
+		}
+	}
+
 	return &pb.CancelOrderResponse{
 		Result: &pb.CancelOrderResponse_Success{
 			Success: &emptypb.Empty{},
@@ -272,7 +301,20 @@ func (s *OrderServiceImpl) UpdateOrder(ctx context.Context, req *pb.UpdateOrderR
 		if !s.isValidStatus(*req.Status) {
 			return nil, status.Errorf(codes.InvalidArgument, "INVALID_STATUS: Invalid status")
 		}
-		order.Status = *req.Status
+
+		oldStatus := order.Status
+		newStatus := *req.Status
+
+		if oldStatus != "cancelled" && newStatus == "cancelled" {
+			for _, item := range order.Items {
+				_, err := s.productClient.UpdateStock(ctx, item.ProductID, int32(item.Quantity))
+				if err != nil {
+					fmt.Printf("FAILED_TO_RESTORE_STOCK: product_id=%d, quantity=%d, error=%v\n", item.ProductID, item.Quantity, err)
+				}
+			}
+		}
+
+		order.Status = newStatus
 	}
 
 	order.UpdatedAt = time.Now()

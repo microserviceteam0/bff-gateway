@@ -39,7 +39,7 @@ services:
       - bff-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8083/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--output-document=/dev/null", "http://localhost:8083/health"]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -74,9 +74,11 @@ services:
     environment:
       DATABASE_URL: postgres://order_user:order_password@order-db:5432/orders_db?sslmode=disable
       GRPC_PORT: 50051
+      MONITORING_PORT: 8082
       PRODUCT_SERVICE_URL: product-service:50051
     ports:
       - "50052:50051"
+      - "8082:8082"
     depends_on:
       order-db:
         condition: service_healthy
@@ -85,6 +87,12 @@ services:
     networks:
       - bff-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--output-document=/dev/null", "http://localhost:8082/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
 
   prometheus:
     image: prom/prometheus:latest
@@ -173,7 +181,7 @@ services:
       - bff-network
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8081/health" ]
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--output-document=/dev/null", "http://localhost:8081/health" ]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -202,6 +210,33 @@ services:
       - bff-network
     restart: unless-stopped
 
+  bff-gateway:
+    build:
+      context: .
+      dockerfile: bff/Dockerfile
+    container_name: bff-gateway
+    environment:
+      - PORT=8080
+      - USER_SERVICE_ADDR=user-service:50053
+      - ORDER_SERVICE_ADDR=order-service:50051
+      - PRODUCT_SERVICE_ADDR=product-service:50051
+      - AUTH_SERVICE_URL=http://auth-service:8084
+      - USER_SERVICE_HTTP_ADDR=http://user-service:8081
+      - PRODUCT_SERVICE_HTTP_ADDR=http://product-service:8083
+    ports:
+      - "8080:8080"
+    depends_on:
+      user-service:
+        condition: service_healthy
+      order-service:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+    networks:
+      - bff-network
+    restart: unless-stopped
 
 volumes:
   product-data:
