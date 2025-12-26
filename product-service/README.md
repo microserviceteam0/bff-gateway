@@ -75,40 +75,8 @@ product-service/
 
 ---
 
-## 🚀 Быстрый старт
-
-### Предварительные требования
-
-- Go 1.25+
-- Docker & Docker Compose
-
-### 1. Клонирование репозитория
-
-
-`git clone https://github.com/microserviceteam0/bff-gateway.git`
-
-`cd bff-gateway/product-service`
-
-
-### 2. Настройка переменных окружения
-
-Создайте файл `.env` на примере `.env.example`:
-
-
-### 3. Запуск с Docker Compose
-
-
-`docker compose up -d`
-
-
-### 4. Проверка работоспособности
-
-
 # Health check
 `curl http://localhost:8083/health`
-
-# Получить все продукты
-`curl http://localhost:8083/api/products`
 
 # Swagger UI
 http://localhost:8083/swagger/
@@ -191,7 +159,6 @@ http://localhost:8083/swagger/
 | `stock` | INTEGER | Количество на складе |
 | `created_at` | TIMESTAMP | Дата создания |
 | `updated_at` | TIMESTAMP | Дата обновления (автообновление) |
-
 
 
 
