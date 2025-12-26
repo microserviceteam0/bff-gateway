@@ -1,0 +1,79 @@
+// api/proto/user/v1/user.proto
+syntax = "proto3";
+
+package user.v1;
+
+option go_package = "user/api/proto/user/v1;userv1";
+
+// Сервис для работы с пользователями
+service UserService {
+  // Получить пользователя по ID
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+
+  // Получить пользователя по Email
+  rpc GetUserByEmail(GetUserByEmailRequest) returns (GetUserResponse);
+
+  // Получить несколько пользователей по ID
+  rpc GetUsers(GetUsersRequest) returns (GetUsersResponse);
+
+  // Проверить существование пользователя
+  rpc UserExists(UserExistsRequest) returns (UserExistsResponse);
+
+  // Проверить учетные данные
+  rpc ValidateCredentials(ValidateCredentialsRequest) returns (ValidateCredentialsResponse);
+}
+
+// Запрос на получение пользователя по ID
+message GetUserRequest {
+  int64 user_id = 1;
+}
+
+// Запрос на получение пользователя по Email
+message GetUserByEmailRequest {
+  string email = 1;
+}
+
+// Запрос на получение нескольких пользователей
+message GetUsersRequest {
+  repeated int64 user_ids = 1;
+}
+
+// Запрос на проверку существования пользователя
+message UserExistsRequest {
+  int64 user_id = 1;
+}
+
+// Запрос на проверку учетных данных
+message ValidateCredentialsRequest {
+  string email = 1;
+  string password = 2;
+}
+
+// Ответ с информацией о пользователе
+message GetUserResponse {
+  User user = 1;
+}
+
+// Ответ с несколькими пользователями
+message GetUsersResponse {
+  repeated User users = 1;
+}
+
+// Ответ на проверку существования
+message UserExistsResponse {
+  bool exists = 1;
+}
+
+// Ответ на проверку учетных данных
+message ValidateCredentialsResponse {
+  bool valid = 1;
+  User user = 2;
+}
+
+// Модель пользователя
+message User {
+  int64 id = 1;
+  string name = 2;
+  string email = 3;
+  string role = 4;
+}
