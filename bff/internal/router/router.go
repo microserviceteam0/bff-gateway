@@ -9,6 +9,8 @@ import (
 	"github.com/microserviceteam0/bff-gateway/bff/internal/clients"
 	"github.com/microserviceteam0/bff-gateway/bff/internal/handler"
 	"github.com/microserviceteam0/bff-gateway/bff/internal/middleware"
+	"github.com/microserviceteam0/bff-gateway/shared/metrics"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -25,7 +27,11 @@ func SetupRouter(
 
 	r.Use(gin.Recovery())
 	r.Use(middleware.SlogLogger(logger))
+	r.Use(metrics.GinMetricsMiddleware("bff-gateway"))
 	r.Use(middleware.RedisCacheMiddleware(rdb, cacheTTL))
+
+	// Metrics endpoint
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// Swagger
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

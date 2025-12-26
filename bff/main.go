@@ -18,6 +18,7 @@ import (
 	"github.com/microserviceteam0/bff-gateway/bff/internal/handler"
 	"github.com/microserviceteam0/bff-gateway/bff/internal/router"
 	"github.com/microserviceteam0/bff-gateway/bff/internal/service"
+	"github.com/microserviceteam0/bff-gateway/shared/metrics"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -50,6 +51,7 @@ func main() {
 		slog.Warn("Failed to connect to Redis, caching will not work", "error", err)
 	} else {
 		slog.Info("Connected to Redis", "addr", cfg.RedisAddr)
+		go monitorRedisPool(rdb, "bff-gateway")
 	}
 
 	// 4. Инициализация gRPC клиентов
@@ -117,3 +119,21 @@ func main() {
 	slog.Info("Server exiting")
 }
 
+func monitorRedisPool(rdb *redis.Client, serviceName string) {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		stats := rdb.PoolStats()
+
+		metrics.DBConnections.WithLabelValues(serviceName, "open").Set(float64(stats.TotalConns))
+		metrics.DBConnections.WithLabelValues(serviceName, "in_use").Set(float64(stats.TotalConns - stats.IdleConns))
+		metrics.DBConnections.WithLabelValues(serviceName, "idle").Set(float64(stats.IdleConns))
+
+		slog.Debug("redis connection pool stats",
+			slog.Uint64("total_connections", uint64(stats.TotalConns)),
+			slog.Uint64("idle_connections", uint64(stats.IdleConns)),
+			slog.Uint64("stale_connections", uint64(stats.StaleConns)),
+		)
+	}
+}
