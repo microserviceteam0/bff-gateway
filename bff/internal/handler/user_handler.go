@@ -68,7 +68,7 @@ func (h *Handler) Login(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Success      200  {object}  dto.UserResponseDTO
+// @Success      200  {object}  dto.UserProfileDTO
 // @Failure      401  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
 // @Router       /profile [get]

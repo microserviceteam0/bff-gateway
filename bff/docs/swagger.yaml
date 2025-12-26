@@ -55,7 +55,6 @@ definitions:
       status:
         type: string
       total_sum:
-        description: В proto это может быть int/string, тут для JS удобнее float/string
         type: number
       user:
         $ref: '#/definitions/dto.UserSummaryDTO'
@@ -71,7 +70,6 @@ definitions:
       price:
         type: number
       quantity:
-        description: Доступный остаток
         type: integer
     type: object
   dto.RegisterUserRequestDTO:
@@ -82,6 +80,15 @@ definitions:
         type: string
       password:
         type: string
+    type: object
+  dto.UserProfileDTO:
+    properties:
+      orders:
+        items:
+          $ref: '#/definitions/dto.OrderResponseDTO'
+        type: array
+      user:
+        $ref: '#/definitions/dto.UserResponseDTO'
     type: object
   dto.UserResponseDTO:
     properties:
@@ -289,7 +296,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.UserResponseDTO'
+            $ref: '#/definitions/dto.UserProfileDTO'
         "401":
           description: Unauthorized
           schema:

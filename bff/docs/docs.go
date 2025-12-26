@@ -303,7 +303,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dto.UserResponseDTO"
+                            "$ref": "#/definitions/dto.UserProfileDTO"
                         }
                     },
                     "401": {
@@ -466,7 +466,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "total_sum": {
-                    "description": "В proto это может быть int/string, тут для JS удобнее float/string",
                     "type": "number"
                 },
                 "user": {
@@ -490,7 +489,6 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "quantity": {
-                    "description": "Доступный остаток",
                     "type": "integer"
                 }
             }
@@ -506,6 +504,20 @@ const docTemplate = `{
                 },
                 "password": {
                     "type": "string"
+                }
+            }
+        },
+        "dto.UserProfileDTO": {
+            "type": "object",
+            "properties": {
+                "orders": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.OrderResponseDTO"
+                    }
+                },
+                "user": {
+                    "$ref": "#/definitions/dto.UserResponseDTO"
                 }
             }
         },

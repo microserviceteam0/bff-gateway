@@ -16,7 +16,7 @@ type BFFService interface {
 	Login(ctx context.Context, req dto.LoginRequestDTO) (*dto.LoginResponseDTO, error)
 	CreateOrder(ctx context.Context, userID int64, userRole string, req dto.CreateOrderRequestDTO) (*dto.OrderResponseDTO, error)
 	CancelOrder(ctx context.Context, userID int64, userRole string, orderID int64, reason string) error
-	GetUserProfile(ctx context.Context, userID int64, userRole string) (*dto.UserResponseDTO, error)
+	GetUserProfile(ctx context.Context, userID int64, userRole string) (*dto.UserProfileDTO, error)
 	ListProducts(ctx context.Context) ([]*dto.ProductResponseDTO, error)
 }
 
@@ -28,6 +28,7 @@ type bffService struct {
 	userHTTPClient    clients.UserHTTPClient
 	productHTTPClient clients.ProductHTTPClient
 }
+
 
 func NewBFFService(
 	userClient clients.UserClient,

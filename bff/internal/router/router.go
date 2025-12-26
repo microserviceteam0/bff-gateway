@@ -2,12 +2,14 @@ package router
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/microserviceteam0/bff-gateway/bff/docs"
 	"github.com/microserviceteam0/bff-gateway/bff/internal/clients"
 	"github.com/microserviceteam0/bff-gateway/bff/internal/handler"
 	"github.com/microserviceteam0/bff-gateway/bff/internal/middleware"
+	"github.com/redis/go-redis/v9"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
@@ -16,11 +18,14 @@ func SetupRouter(
 	logger *slog.Logger,
 	authClient clients.AuthClient,
 	h *handler.Handler,
+	rdb *redis.Client,
+	cacheTTL time.Duration,
 ) *gin.Engine {
 	r := gin.New()
 
 	r.Use(gin.Recovery())
 	r.Use(middleware.SlogLogger(logger))
+	r.Use(middleware.RedisCacheMiddleware(rdb, cacheTTL))
 
 	// Swagger
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

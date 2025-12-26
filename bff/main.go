@@ -14,9 +14,11 @@ import (
 
 	"github.com/microserviceteam0/bff-gateway/bff/internal/clients"
 	bffgrpc "github.com/microserviceteam0/bff-gateway/bff/internal/clients/grpc"
+	"github.com/microserviceteam0/bff-gateway/bff/internal/config"
 	"github.com/microserviceteam0/bff-gateway/bff/internal/handler"
 	"github.com/microserviceteam0/bff-gateway/bff/internal/router"
 	"github.com/microserviceteam0/bff-gateway/bff/internal/service"
+	"github.com/redis/go-redis/v9"
 )
 
 // @title           BFF Gateway API
@@ -34,35 +36,38 @@ func main() {
 
 	slog.Info("Starting BFF Gateway...")
 
-	// 2. Инициализация gRPC клиентов
-	userAddr := os.Getenv("USER_SERVICE_ADDR")
-	if userAddr == "" {
-		userAddr = "localhost:50053"
-	}
-	orderAddr := os.Getenv("ORDER_SERVICE_ADDR")
-	if orderAddr == "" {
-		orderAddr = "localhost:50051"
-	}
-	productAddr := os.Getenv("PRODUCT_SERVICE_ADDR")
-	if productAddr == "" {
-		productAddr = "localhost:50052"
+	// 2. Загрузка конфига
+	cfg := config.Load()
+
+	// 3. Инициализация Redis
+	rdb := redis.NewClient(&redis.Options{
+		Addr: cfg.RedisAddr,
+	})
+	// Проверка соединения
+	ctxPing, cancelPing := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelPing()
+	if err := rdb.Ping(ctxPing).Err(); err != nil {
+		slog.Warn("Failed to connect to Redis, caching will not work", "error", err)
+	} else {
+		slog.Info("Connected to Redis", "addr", cfg.RedisAddr)
 	}
 
-	userConn, err := grpc.NewClient(userAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	// 4. Инициализация gRPC клиентов
+	userConn, err := grpc.NewClient(cfg.UserServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		slog.Error("failed to connect to user service", "error", err)
 		os.Exit(1)
 	}
 	defer userConn.Close()
 
-	orderConn, err := grpc.NewClient(orderAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	orderConn, err := grpc.NewClient(cfg.OrderServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		slog.Error("failed to connect to order service", "error", err)
 		os.Exit(1)
 	}
 	defer orderConn.Close()
 
-	productConn, err := grpc.NewClient(productAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	productConn, err := grpc.NewClient(cfg.ProductServiceAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		slog.Error("failed to connect to product service", "error", err)
 		os.Exit(1)
@@ -73,49 +78,26 @@ func main() {
 	orderClient := bffgrpc.NewOrderClient(orderConn)
 	productClient := bffgrpc.NewProductClient(productConn)
 
-	// 3. Инициализация HTTP Clients
+	// 5. Инициализация HTTP Clients
+	authClient := clients.NewHTTPAuthClient(cfg.AuthServiceURL)
+	userHTTPClient := clients.NewHTTPUserClient(cfg.UserServiceHTTP)
+	productHTTPClient := clients.NewHTTPProductClient(cfg.ProductServiceHTTP)
 
-	// Auth Service (Token Validation, Login)
-	authServiceURL := os.Getenv("AUTH_SERVICE_URL")
-	if authServiceURL == "" {
-		authServiceURL = "http://localhost:8084"
-	}
-	authClient := clients.NewHTTPAuthClient(authServiceURL)
-
-	// User Service HTTP (Registration)
-	userHTTPAddr := os.Getenv("USER_SERVICE_HTTP_ADDR")
-	if userHTTPAddr == "" {
-		userHTTPAddr = "http://localhost:8081"
-	}
-	userHTTPClient := clients.NewHTTPUserClient(userHTTPAddr)
-
-	// Product Service HTTP (List Products)
-	productHTTPAddr := os.Getenv("PRODUCT_SERVICE_HTTP_ADDR")
-	if productHTTPAddr == "" {
-		productHTTPAddr = "http://localhost:8082"
-	}
-	productHTTPClient := clients.NewHTTPProductClient(productHTTPAddr)
-
-	// 4. Инициализация сервисов
+	// 6. Инициализация сервисов
 	bffService := service.NewBFFService(userClient, orderClient, productClient, authClient, userHTTPClient, productHTTPClient)
 
-	// 5. Инициализация Роутера
+	// 7. Инициализация Роутера
 	h := handler.NewHandler(bffService)
-	r := router.SetupRouter(logger, authClient, h)
+	r := router.SetupRouter(logger, authClient, h, rdb, cfg.CacheTTL)
 
-	// 6. Запуск сервера
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
+	// 8. Запуск сервера
 	srv := &http.Server{
-		Addr:    ":" + port,
+		Addr:    ":" + cfg.Port,
 		Handler: r,
 	}
 
 	go func() {
-		slog.Info("Server listening", "port", port)
+		slog.Info("Server listening", "port", cfg.Port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			slog.Error("listen: %s\n", err)
 		}

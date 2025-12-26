@@ -296,7 +296,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dto.UserResponseDTO"
+                            "$ref": "#/definitions/dto.UserProfileDTO"
                         }
                     },
                     "401": {
@@ -459,7 +459,6 @@
                     "type": "string"
                 },
                 "total_sum": {
-                    "description": "В proto это может быть int/string, тут для JS удобнее float/string",
                     "type": "number"
                 },
                 "user": {
@@ -483,7 +482,6 @@
                     "type": "number"
                 },
                 "quantity": {
-                    "description": "Доступный остаток",
                     "type": "integer"
                 }
             }
@@ -499,6 +497,20 @@
                 },
                 "password": {
                     "type": "string"
+                }
+            }
+        },
+        "dto.UserProfileDTO": {
+            "type": "object",
+            "properties": {
+                "orders": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.OrderResponseDTO"
+                    }
+                },
+                "user": {
+                    "$ref": "#/definitions/dto.UserResponseDTO"
                 }
             }
         },

@@ -6,6 +6,11 @@ type UserResponseDTO struct {
 	Email string `json:"email"`
 }
 
+type UserProfileDTO struct {
+	User   UserResponseDTO    `json:"user"`
+	Orders []OrderResponseDTO `json:"orders"`
+}
+
 type RegisterUserRequestDTO struct {
 	Name     string `json:"name"`
 	Email    string `json:"email"`
