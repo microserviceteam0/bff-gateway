@@ -45,7 +45,7 @@ func main() {
 		Addr: cfg.RedisAddr,
 	})
 	// Проверка соединения
-	ctxPing, cancelPing := context.WithTimeout(context.Background(), 5*time.Second)
+	ctxPing, cancelPing := context.WithTimeout(context.Background(), cfg.HttpClientTimeout)
 	defer cancelPing()
 	if err := rdb.Ping(ctxPing).Err(); err != nil {
 		slog.Warn("Failed to connect to Redis, caching will not work", "error", err)
@@ -77,20 +77,20 @@ func main() {
 	defer productConn.Close()
 
 	userClient := bffgrpc.NewUserClient(userConn)
-	orderClient := bffgrpc.NewOrderClient(orderConn)
+	orderClient := bffgrpc.NewOrderClient(orderConn, cfg.RetryAttempts, cfg.RetryDelay)
 	productClient := bffgrpc.NewProductClient(productConn)
 
 	// 5. Инициализация HTTP Clients
 	authClient := clients.NewHTTPAuthClient(cfg.AuthServiceURL)
 	userHTTPClient := clients.NewHTTPUserClient(cfg.UserServiceHTTP)
-	productHTTPClient := clients.NewHTTPProductClient(cfg.ProductServiceHTTP)
+	productHTTPClient := clients.NewHTTPProductClient(cfg.ProductServiceHTTP, cfg.RetryAttempts, cfg.RetryDelay, cfg.HttpClientTimeout)
 
 	// 6. Инициализация сервисов
 	bffService := service.NewBFFService(userClient, orderClient, productClient, authClient, userHTTPClient, productHTTPClient)
 
 	// 7. Инициализация Роутера
 	h := handler.NewHandler(bffService)
-	r := router.SetupRouter(logger, authClient, h, rdb, cfg.CacheTTL)
+	r := router.SetupRouter(logger, authClient, h, rdb, cfg.CacheTTL, cfg.RateLimitRPS, cfg.RateLimitBurst)
 
 	// 8. Запуск сервера
 	srv := &http.Server{
@@ -101,7 +101,7 @@ func main() {
 	go func() {
 		slog.Info("Server listening", "port", cfg.Port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.Error("listen: %s\n", err)
+			slog.Error("listen failed", "error", err)
 		}
 	}()
 
@@ -110,10 +110,10 @@ func main() {
 	<-quit
 	slog.Info("Shutting down server...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
-		slog.Error("Server forced to shutdown: ", err)
+		slog.Error("Server forced to shutdown", "error", err)
 	}
 
 	slog.Info("Server exiting")

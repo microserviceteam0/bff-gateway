@@ -22,10 +22,13 @@ func SetupRouter(
 	h *handler.Handler,
 	rdb *redis.Client,
 	cacheTTL time.Duration,
+	rateLimitRPS float64,
+	rateLimitBurst int,
 ) *gin.Engine {
 	r := gin.New()
 
 	r.Use(gin.Recovery())
+	r.Use(middleware.RateLimit(rateLimitRPS, rateLimitBurst))
 	r.Use(middleware.SlogLogger(logger))
 	r.Use(metrics.GinMetricsMiddleware("bff-gateway"))
 	r.Use(middleware.RedisCacheMiddleware(rdb, cacheTTL))

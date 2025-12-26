@@ -2,20 +2,27 @@ package grpc
 
 import (
 	"context"
+	"log/slog"
+	"time"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/microserviceteam0/bff-gateway/bff/internal/clients"
 	"google.golang.org/grpc"
-	
+
 	orderv1 "github.com/microserviceteam0/bff-gateway/bff/api/proto/order/v1"
 )
 
 type orderClient struct {
-	api orderv1.OrderServiceClient
+	api           orderv1.OrderServiceClient
+	retryAttempts uint
+	retryDelay    time.Duration
 }
 
-func NewOrderClient(conn *grpc.ClientConn) clients.OrderClient {
+func NewOrderClient(conn *grpc.ClientConn, retryAttempts uint, retryDelay time.Duration) clients.OrderClient {
 	return &orderClient{
-		api: orderv1.NewOrderServiceClient(conn),
+		api:           orderv1.NewOrderServiceClient(conn),
+		retryAttempts: retryAttempts,
+		retryDelay:    retryDelay,
 	}
 }
 
@@ -39,16 +46,44 @@ func (c *orderClient) UpdateOrder(ctx context.Context, req *orderv1.UpdateOrderR
 }
 
 func (c *orderClient) GetOrder(ctx context.Context, orderID int64, opts ...grpc.CallOption) (*orderv1.GetOrderResponse, error) {
-	resp, err := c.api.GetOrder(ctx, &orderv1.GetOrderRequest{OrderId: orderID}, opts...)
+	var resp *orderv1.GetOrderResponse
+	err := retry.Do(
+		func() error {
+			var err error
+			resp, err = c.api.GetOrder(ctx, &orderv1.GetOrderRequest{OrderId: orderID}, opts...)
+			return err
+		},
+		retry.Context(ctx),
+		retry.Attempts(c.retryAttempts),
+		retry.Delay(c.retryDelay),
+	)
 	return resp, clients.MapGRPCError(err)
 }
 
 func (c *orderClient) GetUserOrders(ctx context.Context, req *orderv1.GetUserOrdersRequest, opts ...grpc.CallOption) (*orderv1.GetUserOrdersResponse, error) {
-	resp, err := c.api.GetUserOrders(ctx, req, opts...)
-	return resp, clients.MapGRPCError(err)
+	var resp *orderv1.GetUserOrdersResponse
+	err := retry.Do(
+		func() error {
+			var err error
+			resp, err = c.api.GetUserOrders(ctx, req, opts...)
+			return err
+		},
+		retry.Context(ctx),
+		retry.Attempts(c.retryAttempts),
+		retry.Delay(c.retryDelay),
+	)
+	if err != nil {
+		slog.Error("Fallback: GetUserOrders failed after retries. Returning empty list", "error", err)
+		return &orderv1.GetUserOrdersResponse{
+			Orders: []*orderv1.Order{},
+		}, nil
+	}
+
+	return resp, nil
 }
 
 func (c *orderClient) GetOrderStats(ctx context.Context, userID int64, opts ...grpc.CallOption) (*orderv1.GetOrderStatsResponse, error) {
 	resp, err := c.api.GetOrderStats(ctx, &orderv1.GetOrderStatsRequest{UserId: userID}, opts...)
 	return resp, clients.MapGRPCError(err)
 }
+
